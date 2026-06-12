@@ -35,11 +35,11 @@ and `lakefile.toml` pins `mathlib` to `rev = "v4.30.0-rc2"`. Keep these in sync 
   subgroups `⟨x⟩`, `⟨y⟩`, `⟨x*y⟩`. Two generating pairs yield a Beauville structure iff their
   Σ-sets intersect only at the identity.
 
-- `GenBeauGrp/Structures.lean` — `GeneralisedBeauvilleStructure G`: a finite, indexed family
-  `pairs : ι → GeneratingPair G` whose Σ-sets are pairwise disjoint. **Work in progress**: it calls
-  `SigmaSet (pairs i)` with a single `GeneratingPair` argument, but `sigmaSet` (lowercase, defined in
-  `SigmaSet.lean`) takes two separate group elements `x y`, so this does not currently type-check.
-  This file is also not yet imported into `GenBeauGrp.lean`.
+- `GenBeauGrp/Structures.lean` — `GeneralisedBeauvilleStructure G`: an indexed family
+  `pairs : ι → GeneratingPair G` over a `Fintype ι`, with the condition
+  `(⋂ i, sigmaSet (pairs i).x (pairs i).y) = {1}` (the Σ-sets meet only at the identity). Imports
+  `Basic` and `SigmaSet` and type-checks, but is **not yet imported into `GenBeauGrp.lean`**, so it is
+  outside the public import graph (still type-checked by a bare `lake build`).
 
 - `GenBeauGrp/Examples.lean` — scratch examples and lemmas-in-progress (generating pairs for `ℤ`,
   `ℤ × ℤ`, products of cyclic groups, permutation helpers `s`/`c` on `Equiv.Perm (Fin n)`). Not yet
