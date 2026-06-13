@@ -84,6 +84,8 @@ theorem top_of_mem {x y : CpSq p} (hgen : Subgroup.closure ({x, y} : Set (CpSq p
   rw [hgen] at h1
   exact top_le_iff.mp h1
 
+section GeneratingPair
+
 variable {x y : CpSq p} (hgen : Subgroup.closure ({x, y} : Set (CpSq p)) = ⊤)
 
 include hgen
@@ -155,5 +157,90 @@ theorem ncard_lines_of_sigmaSet :
     {H : Subgroup (CpSq p) | Nat.card H = p ∧ (↑H : Set (CpSq p)) ⊆ sigmaSet x y}.ncard = 3 := by
   rw [lines_of_sigmaSet hgen, Set.ncard_eq_three]
   exact ⟨_, _, _, zpowers_fst_ne_snd hgen, zpowers_fst_ne_mul hgen, zpowers_snd_ne_mul hgen, rfl⟩
+
+end GeneratingPair
+
+/-! ### Proposition: `max BSpec(C_p²) = 4` -/
+
+/-- **Upper bound.** Any primitive generalised Beauville structure of `C_p²` has dimension `≤ 4`.
+For each index `j`, primitivity yields a non-identity `g j` lying in every Σ-set except the `j`-th;
+the lines `⟨g j⟩` are distinct and, for a fixed `i`, the `d-1` of them with `j ≠ i` all lie inside
+`Σ_i`, which holds only three lines. -/
+theorem dimension_le_four (B : GeneralisedBeauvilleStructure (CpSq p))
+    (hB : B.IsPrimitive) : B.dimension ≤ 4 := by
+  classical
+  have witness : ∀ j : B.ι, ∃ g : CpSq p, g ≠ 1 ∧
+      (∀ k, k ≠ j → g ∈ sigmaSet (B.pairs k).x (B.pairs k).y) ∧
+      g ∉ sigmaSet (B.pairs j).x (B.pairs j).y := by
+    intro j
+    have hproper : (Finset.univ.erase j) ≠ (Finset.univ : Finset B.ι) := by
+      intro h
+      have hj : j ∈ Finset.univ.erase j := by rw [h]; exact Finset.mem_univ j
+      exact (Finset.mem_erase.mp hj).1 rfl
+    have hne := hB _ hproper
+    have h1mem : (1 : CpSq p) ∈
+        ⋂ i ∈ Finset.univ.erase j, sigmaSet (B.pairs i).x (B.pairs i).y := by
+      rw [Set.mem_iInter₂]; exact fun i _ => one_mem_sigmaSet _ _
+    have hex : ∃ g ∈ (⋂ i ∈ Finset.univ.erase j, sigmaSet (B.pairs i).x (B.pairs i).y),
+        g ≠ 1 := by
+      by_contra hc
+      simp only [not_exists, not_and, not_ne_iff] at hc
+      exact hne (Set.eq_singleton_iff_unique_mem.mpr ⟨h1mem, hc⟩)
+    obtain ⟨g, hgX, hg1⟩ := hex
+    rw [Set.mem_iInter₂] at hgX
+    refine ⟨g, hg1, fun k hk => hgX k (Finset.mem_erase.mpr ⟨hk, Finset.mem_univ k⟩), ?_⟩
+    intro hgj
+    have hall : g ∈ ⋂ i, sigmaSet (B.pairs i).x (B.pairs i).y := by
+      rw [Set.mem_iInter]; intro k
+      by_cases hk : k = j
+      · subst hk; exact hgj
+      · exact hgX k (Finset.mem_erase.mpr ⟨hk, Finset.mem_univ k⟩)
+    rw [B.inter_sigmaSet_eq_one, Set.mem_singleton_iff] at hall
+    exact hg1 hall
+  choose g hg1 hgmem hgnot using witness
+  set f : B.ι → Subgroup (CpSq p) := fun j => Subgroup.zpowers (g j) with hf
+  rw [GeneralisedBeauvilleStructure.dimension]
+  rcases isEmpty_or_nonempty B.ι with hempty | hne
+  · have : Fintype.card B.ι = 0 := Fintype.card_eq_zero
+    omega
+  · obtain ⟨i⟩ := hne
+    have hgen_i : Subgroup.closure ({(B.pairs i).x, (B.pairs i).y} : Set (CpSq p)) = ⊤ :=
+      (B.pairs i).generates
+    have hmaps : ∀ j ∈ Finset.univ.erase i,
+        f j ∈ ({Subgroup.zpowers (B.pairs i).x, Subgroup.zpowers (B.pairs i).y,
+          Subgroup.zpowers ((B.pairs i).x * (B.pairs i).y)} : Finset (Subgroup (CpSq p))) := by
+      intro j hj
+      have hji : j ≠ i := (Finset.mem_erase.mp hj).1
+      have hmem : g j ∈ sigmaSet (B.pairs i).x (B.pairs i).y := hgmem j i (Ne.symm hji)
+      have hin : f j ∈ {H : Subgroup (CpSq p) | Nat.card H = p ∧
+          (↑H : Set (CpSq p)) ⊆ sigmaSet (B.pairs i).x (B.pairs i).y} :=
+        ⟨card_zpowers_eq_p (hg1 j), zpowers_subset_sigmaSet hmem⟩
+      rw [lines_of_sigmaSet hgen_i] at hin
+      simp only [Set.mem_insert_iff, Set.mem_singleton_iff] at hin
+      simp only [Finset.mem_insert, Finset.mem_singleton]
+      exact hin
+    have hinj : Set.InjOn f ↑(Finset.univ.erase i) := by
+      intro j _ j' _ hff
+      by_contra hjj
+      have hmem' : g j' ∈ sigmaSet (B.pairs j).x (B.pairs j).y := hgmem j' j hjj
+      have hsub := zpowers_subset_sigmaSet hmem'
+      have hgj_in : g j ∈ (↑(f j') : Set (CpSq p)) := by
+        rw [← hff]; exact Subgroup.mem_zpowers (g j)
+      exact hgnot j (hsub hgj_in)
+    have hcard_le := Finset.card_le_card_of_injOn f
+      (fun j hj => Finset.mem_coe.mpr (hmaps j (Finset.mem_coe.mp hj))) hinj
+    have h3 : ({Subgroup.zpowers (B.pairs i).x, Subgroup.zpowers (B.pairs i).y,
+        Subgroup.zpowers ((B.pairs i).x * (B.pairs i).y)} :
+          Finset (Subgroup (CpSq p))).card ≤ 3 := by
+      have e1 := Finset.card_insert_le (Subgroup.zpowers (B.pairs i).x)
+        ({Subgroup.zpowers (B.pairs i).y,
+          Subgroup.zpowers ((B.pairs i).x * (B.pairs i).y)} : Finset (Subgroup (CpSq p)))
+      have e2 := Finset.card_insert_le (Subgroup.zpowers (B.pairs i).y)
+        ({Subgroup.zpowers ((B.pairs i).x * (B.pairs i).y)} : Finset (Subgroup (CpSq p)))
+      simp only [Finset.card_singleton] at e2
+      omega
+    have hcard_erase : (Finset.univ.erase i).card = Fintype.card B.ι - 1 := by
+      rw [Finset.card_erase_of_mem (Finset.mem_univ i), Finset.card_univ]
+    omega
 
 end CpSq
