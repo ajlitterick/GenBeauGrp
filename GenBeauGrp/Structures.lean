@@ -25,3 +25,17 @@ def GeneralisedBeauvilleStructure.IsPrimitive {G : Type*} [Group G]
     (B : GeneralisedBeauvilleStructure G) : Prop :=
   ∀ S : Finset B.ι, S ≠ Finset.univ →
     (⋂ i ∈ S, sigmaSet (B.pairs i).x (B.pairs i).y) ≠ {1}
+
+/-- **Existence of a Σ-set not containing a given set.** If `X ⊆ G` contains a non-identity
+element, then in any generalised Beauville structure `B` of `G` some Σ-set fails to contain `X`.
+(If every Σ-set contained `X`, its non-identity element would lie in `⋂ᵢ Σᵢ = {1}`.) -/
+theorem GeneralisedBeauvilleStructure.exists_sigmaSet_not_subset {G : Type*} [Group G]
+    (B : GeneralisedBeauvilleStructure G) {X : Set G} (hX : ∃ g ∈ X, g ≠ 1) :
+    ∃ i, ¬ X ⊆ sigmaSet (B.pairs i).x (B.pairs i).y := by
+  obtain ⟨g, hgX, hg1⟩ := hX
+  by_contra h
+  simp only [not_exists, not_not] at h
+  have hmem : g ∈ ⋂ i, sigmaSet (B.pairs i).x (B.pairs i).y :=
+    Set.mem_iInter.mpr fun i => h i hgX
+  rw [B.inter_sigmaSet_eq_one, Set.mem_singleton_iff] at hmem
+  exact hg1 hmem
