@@ -20,7 +20,9 @@ example : AddGeneratingPair (ℤ × ℤ) :=
   ⟩
 
 noncomputable example
-  (G₁ G₂ : Type*) [CommGroup G₁] [CommGroup G₂] [IsCyclic G₁] [IsCyclic G₂] : GeneratingPair (G₁ × G₂) := by
+  (G₁ G₂ : Type*)
+    [CommGroup G₁] [IsCyclic G₁]
+    [CommGroup G₂] [IsCyclic G₂] : GeneratingPair (G₁ × G₂) := by
     -- If g₁ generates G₁ and g₂ generates G₂, then (g₁,1) and (1,g₂) generate the product.
     let g₁ := (IsCyclic.exists_zpow_surjective (G := G₁)).choose
     let g₂ := (IsCyclic.exists_zpow_surjective (G := G₂)).choose
