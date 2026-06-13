@@ -51,32 +51,19 @@ def permGeneratingPair {n : ℕ} (hn : 2 < n) : GeneratingPair (Equiv.Perm (Fin 
     haveI : NeZero n := ⟨by omega⟩
     set i : Fin n := ⟨n - 1, by omega⟩ with hi
     have hc : c n hn = Fin.cycleRange i := rfl
-    have hi0 : i ≠ 0 := by
-      apply Fin.ne_of_val_ne
-      simp only [hi, Fin.val_zero]
-      omega
-    have hcyc : (c n hn).IsCycle := by rw [hc]; exact Fin.isCycle_cycleRange hi0
+    have hi0 : i ≠ 0 := Fin.ne_of_val_ne (by simp only [hi, Fin.val_zero]; omega)
     have h0i : (0 : Fin n) < i := Fin.lt_def.mpr (by simp only [hi, Fin.val_zero]; omega)
-    have hc0 : (c n hn) 0 = 1 := by
-      rw [hc, Fin.cycleRange_of_lt h0i, zero_add]
+    have hcyc : (c n hn).IsCycle := hc ▸ Fin.isCycle_cycleRange hi0
+    have hc0 : (c n hn) 0 = 1 := by rw [hc, Fin.cycleRange_of_lt h0i, zero_add]
     have hsupp : (c n hn).support = Finset.univ := by
-      rw [hc, Finset.eq_univ_iff_forall]
-      intro j
-      rw [Equiv.Perm.mem_support]
-      have hji : j ≤ i := Fin.le_def.mpr (by have := j.isLt; simp only [hi]; omega)
-      rcases lt_or_eq_of_le hji with hlt | heq
-      · intro h
-        have h1 := Fin.coe_cycleRange_of_lt hlt
-        rw [h] at h1
-        omega
-      · rw [heq, Fin.cycleRange_of_eq rfl]
-        exact fun h => hi0 h.symm
-    have e0 : (⟨0, Nat.zero_lt_of_lt hn⟩ : Fin n) = 0 := by apply Fin.ext; simp
-    have e1 : (⟨1, Nat.lt_of_add_left_lt hn⟩ : Fin n) = 1 := by
-      apply Fin.ext; rw [Fin.val_one', Nat.mod_eq_of_lt (show 1 < n by omega)]
+      apply Finset.eq_univ_of_card
+      rw [hc, ← Equiv.Perm.sum_cycleType, Fin.cycleType_cycleRange hi0, Multiset.sum_singleton,
+        Fintype.card_fin]
+      have : (i : ℕ) = n - 1 := rfl
+      omega
     have hs : s hn = Equiv.swap (0 : Fin n) ((c n hn) 0) := by
-      rw [hc0]
-      unfold s
-      rw [e0, e1]
+      rw [hc0, s, show (⟨0, Nat.zero_lt_of_lt hn⟩ : Fin n) = 0 from Fin.ext (by simp),
+        show (⟨1, Nat.lt_of_add_left_lt hn⟩ : Fin n) = 1 from
+          Fin.ext (by rw [Fin.val_one', Nat.mod_eq_of_lt (show 1 < n by omega)])]
     rw [hs, Set.pair_comm]
     exact Equiv.Perm.closure_cycle_adjacent_swap hcyc hsupp 0
