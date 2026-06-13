@@ -62,7 +62,9 @@ def permGeneratingPair {n : ℕ} (hn : 2 < n) : GeneratingPair (Equiv.Perm (Fin 
       have : (i : ℕ) = n - 1 := rfl
       omega
     have hs : s hn = Equiv.swap (0 : Fin n) ((c n hn) 0) := by
-      rw [hc0, s, show (⟨0, Nat.zero_lt_of_lt hn⟩ : Fin n) = 0 from Fin.ext (by simp),
+      rw [hc0, s,
+        show (⟨0, Nat.zero_lt_of_lt hn⟩ : Fin n) = 0 from
+          Fin.ext (by simp only [Fin.coe_ofNat_eq_mod, Nat.zero_mod]),
         show (⟨1, Nat.lt_of_add_left_lt hn⟩ : Fin n) = 1 from
           Fin.ext (by rw [Fin.val_one', Nat.mod_eq_of_lt (show 1 < n by omega)])]
     rw [hs, Set.pair_comm]
