@@ -243,4 +243,50 @@ theorem dimension_le_four (B : GeneralisedBeauvilleStructure (CpSq p))
       rw [Finset.card_erase_of_mem (Finset.mem_univ i), Finset.card_univ]
     omega
 
+/-! ### Construction helpers for the lower bound -/
+
+/-- A linear functional separating `x` from `y` certifies `y ∉ ⟨x⟩`. -/
+theorem not_mem_zpowers_of_hom {x y : CpSq p} (ℓ : (ZMod p × ZMod p) →+ ZMod p)
+    (hx : ℓ (Multiplicative.toAdd x) = 0) (hy : ℓ (Multiplicative.toAdd y) ≠ 0) :
+    y ∉ Subgroup.zpowers x := by
+  intro hmem
+  obtain ⟨k, hk⟩ := Subgroup.mem_zpowers_iff.mp hmem
+  apply hy
+  rw [← hk, toAdd_zpow, map_zsmul, hx, smul_zero]
+
+/-- Two distinct lines span `C_p²`: if `x ≠ 1` and `y ∉ ⟨x⟩` then `x, y` generate. -/
+theorem closure_eq_top {x y : CpSq p} (hx : x ≠ 1) (hy : y ∉ Subgroup.zpowers x) :
+    Subgroup.closure ({x, y} : Set (CpSq p)) = ⊤ := by
+  set H := Subgroup.closure ({x, y} : Set (CpSq p)) with hHdef
+  have hxH : x ∈ H := Subgroup.subset_closure (Set.mem_insert _ _)
+  have hyH : y ∈ H := Subgroup.subset_closure (Set.mem_insert_of_mem _ rfl)
+  have hxle : Subgroup.zpowers x ≤ H := Subgroup.zpowers_le.mpr hxH
+  have hp : p.Prime := Fact.out
+  have hdvd : Nat.card H ∣ p ^ 2 := by
+    have := Subgroup.card_subgroup_dvd_card H; rwa [card_eq] at this
+  have hpdvd : p ∣ Nat.card H := by
+    have := Subgroup.card_dvd_of_le hxle; rwa [card_zpowers_eq_p hx] at this
+  by_cases hc : Nat.card H = p
+  · exfalso; apply hy; rw [zpowers_eq_of_mem hx hc hxH]; exact hyH
+  · obtain ⟨k, hk2, hkeq⟩ := (Nat.dvd_prime_pow hp).mp hdvd
+    have hk0 : k ≠ 0 := by
+      rintro rfl; rw [pow_zero] at hkeq; rw [hkeq] at hpdvd
+      exact (hp.one_lt.ne') (Nat.dvd_one.mp hpdvd)
+    have hkne1 : k ≠ 1 := fun h => hc (by rw [hkeq, h, pow_one])
+    have hk : k = 2 := by omega
+    apply Subgroup.eq_top_of_card_eq
+    rw [hkeq, hk, card_eq]
+
+/-- For odd `p`, squaring a non-identity element keeps the same line. -/
+theorem zpowers_sq {x : CpSq p} (hx : x ≠ 1) (hp2 : p ≠ 2) :
+    Subgroup.zpowers (x ^ 2) = Subgroup.zpowers x := by
+  have hx2 : x ^ 2 ≠ 1 := by
+    intro h
+    have hd : orderOf x ∣ 2 := orderOf_dvd_of_pow_eq_one h
+    rw [orderOf_eq_p hx] at hd
+    rcases Nat.prime_two.eq_one_or_self_of_dvd p hd with h1 | h2
+    · exact (Fact.out : p.Prime).ne_one h1
+    · exact hp2 h2
+  exact zpowers_eq_of_mem hx2 (card_zpowers_eq_p hx) (pow_mem (Subgroup.mem_zpowers x) 2)
+
 end CpSq
