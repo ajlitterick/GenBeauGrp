@@ -3,6 +3,7 @@ import GenBeauGrp.Structures
 import Mathlib.Data.ZMod.Basic
 import Mathlib.GroupTheory.OrderOfElement
 import Mathlib.Data.ZMod.QuotientGroup
+import Mathlib.Tactic.Abel
 
 /-!
 # The Beauville spectrum of `C_p²` for odd primes `p`
@@ -277,16 +278,300 @@ theorem closure_eq_top {x y : CpSq p} (hx : x ≠ 1) (hy : y ∉ Subgroup.zpower
     apply Subgroup.eq_top_of_card_eq
     rw [hkeq, hk, card_eq]
 
-/-- For odd `p`, squaring a non-identity element keeps the same line. -/
-theorem zpowers_sq {x : CpSq p} (hx : x ≠ 1) (hp2 : p ≠ 2) :
-    Subgroup.zpowers (x ^ 2) = Subgroup.zpowers x := by
-  have hx2 : x ^ 2 ≠ 1 := by
+/-- Raising a non-identity element of `C_p²` to a power coprime to `p` keeps the same line. -/
+theorem zpowers_pow {x : CpSq p} (hx : x ≠ 1) {n : ℕ} (hn : ¬ p ∣ n) :
+    Subgroup.zpowers (x ^ n) = Subgroup.zpowers x := by
+  have hxn : x ^ n ≠ 1 := by
     intro h
-    have hd : orderOf x ∣ 2 := orderOf_dvd_of_pow_eq_one h
+    have hd : orderOf x ∣ n := orderOf_dvd_of_pow_eq_one h
     rw [orderOf_eq_p hx] at hd
-    rcases Nat.prime_two.eq_one_or_self_of_dvd p hd with h1 | h2
-    · exact (Fact.out : p.Prime).ne_one h1
-    · exact hp2 h2
-  exact zpowers_eq_of_mem hx2 (card_zpowers_eq_p hx) (pow_mem (Subgroup.mem_zpowers x) 2)
+    exact hn hd
+  exact zpowers_eq_of_mem hxn (card_zpowers_eq_p hx) (pow_mem (Subgroup.mem_zpowers x) n)
+
+/-- If the line `⟨x⟩` differs from an order-`p` subgroup `H`, then `x ∉ H`. -/
+theorem not_mem_of_zpowers_ne {x : CpSq p} (hx : x ≠ 1) {H : Subgroup (CpSq p)}
+    (hcard : Nat.card H = p) (hne : Subgroup.zpowers x ≠ H) : x ∉ H :=
+  fun hmem => hne (zpowers_eq_of_mem hx hcard hmem)
+
+/-- For a prime `p ≠ k` (with `k` prime), `p` does not divide `k`. -/
+theorem not_dvd_of_ne {k : ℕ} (hk : k.Prime) (h : p ≠ k) : ¬ p ∣ k := by
+  intro hd
+  rcases hk.eq_one_or_self_of_dvd p hd with h1 | h2
+  · exact (Fact.out : p.Prime).ne_one h1
+  · exact h h2
+
+/-- Two distinct lines generate, so coinciding lines fail to generate. -/
+theorem zpowers_ne_of_top {u v : CpSq p}
+    (htop : Subgroup.closure ({u, v} : Set (CpSq p)) = ⊤) :
+    Subgroup.zpowers u ≠ Subgroup.zpowers v := fun h =>
+  zpowers_ne_top u (top_of_mem htop (Subgroup.mem_zpowers u) (h.symm ▸ Subgroup.mem_zpowers v))
+
+/-! ### The dimension-four construction
+
+Throughout, `(a, b)` is a generating pair of `C_p²` and `p ≠ 2`. The four constituent lines are
+`⟨a⟩, ⟨b⟩, ⟨a*b⟩, ⟨a*b²⟩`. -/
+
+section Dim4
+
+variable {a b : CpSq p} (hgen : Subgroup.closure ({a, b} : Set (CpSq p)) = ⊤) (hp2 : p ≠ 2)
+
+include hgen
+
+theorem elt_eq_2 : a⁻¹ * (a * b) ^ 2 = a * b ^ 2 := by
+  apply Multiplicative.toAdd.injective
+  simp only [toAdd_mul, toAdd_inv, toAdd_pow]; abel
+
+theorem elt_eq_3 : b * (a * b) = a * b ^ 2 := by
+  apply Multiplicative.toAdd.injective
+  simp only [toAdd_mul, toAdd_pow]; abel
+
+theorem mul_sq_ne_one : a * b ^ 2 ≠ 1 := by
+  intro h
+  refine not_mem_of_zpowers_ne (fst_ne_one hgen) (card_zpowers_eq_p (snd_ne_one hgen))
+    (zpowers_fst_ne_snd hgen) ?_
+  rw [eq_inv_of_mul_eq_one_left h]
+  exact inv_mem (pow_mem (Subgroup.mem_zpowers b) 2)
+
+include hp2
+
+theorem gen_a_b2 : Subgroup.closure ({a, b ^ 2} : Set (CpSq p)) = ⊤ := by
+  refine top_of_mem hgen (Subgroup.subset_closure (Set.mem_insert _ _)) ?_
+  have hb2 : b ^ 2 ∈ Subgroup.closure ({a, b ^ 2} : Set (CpSq p)) :=
+    Subgroup.subset_closure (Set.mem_insert_of_mem _ rfl)
+  have : b ∈ Subgroup.zpowers (b ^ 2) := by
+    rw [zpowers_pow (snd_ne_one hgen) (not_dvd_of_ne Nat.prime_two hp2)]
+    exact Subgroup.mem_zpowers b
+  exact Subgroup.zpowers_le.mpr hb2 this
+
+theorem gen_3 : Subgroup.closure ({a⁻¹, (a * b) ^ 2} : Set (CpSq p)) = ⊤ := by
+  refine top_of_mem hgen ?_ ?_
+  · have ha : a⁻¹ ∈ Subgroup.closure ({a⁻¹, (a * b) ^ 2} : Set (CpSq p)) :=
+      Subgroup.subset_closure (Set.mem_insert _ _)
+    simpa using inv_mem ha
+  · have hai : a⁻¹ ∈ Subgroup.closure ({a⁻¹, (a * b) ^ 2} : Set (CpSq p)) :=
+      Subgroup.subset_closure (Set.mem_insert _ _)
+    have hab2 : (a * b) ^ 2 ∈ Subgroup.closure ({a⁻¹, (a * b) ^ 2} : Set (CpSq p)) :=
+      Subgroup.subset_closure (Set.mem_insert_of_mem _ rfl)
+    have hab : a * b ∈ Subgroup.closure ({a⁻¹, (a * b) ^ 2} : Set (CpSq p)) := by
+      have : a * b ∈ Subgroup.zpowers ((a * b) ^ 2) := by
+        rw [zpowers_pow (mul_ne_one hgen) (not_dvd_of_ne Nat.prime_two hp2)]
+        exact Subgroup.mem_zpowers _
+      exact Subgroup.zpowers_le.mpr hab2 this
+    have hx : a⁻¹ * (a * b) ∈ Subgroup.closure ({a⁻¹, (a * b) ^ 2} : Set (CpSq p)) :=
+      mul_mem hai hab
+    rwa [inv_mul_cancel_left] at hx
+
+theorem gen_4 : Subgroup.closure ({b, a * b} : Set (CpSq p)) = ⊤ := by
+  refine top_of_mem hgen ?_ (Subgroup.subset_closure (Set.mem_insert _ _))
+  have hb : b ∈ Subgroup.closure ({b, a * b} : Set (CpSq p)) :=
+    Subgroup.subset_closure (Set.mem_insert _ _)
+  have hab : a * b ∈ Subgroup.closure ({b, a * b} : Set (CpSq p)) :=
+    Subgroup.subset_closure (Set.mem_insert_of_mem _ rfl)
+  have hx : (a * b) * b⁻¹ ∈ Subgroup.closure ({b, a * b} : Set (CpSq p)) :=
+    mul_mem hab (inv_mem hb)
+  rwa [mul_inv_cancel_right] at hx
+
+theorem gen_a_ab2 : Subgroup.closure ({a, a * b ^ 2} : Set (CpSq p)) = ⊤ := by
+  refine top_of_mem hgen (Subgroup.subset_closure (Set.mem_insert _ _)) ?_
+  have ha : a ∈ Subgroup.closure ({a, a * b ^ 2} : Set (CpSq p)) :=
+    Subgroup.subset_closure (Set.mem_insert _ _)
+  have hab2 : a * b ^ 2 ∈ Subgroup.closure ({a, a * b ^ 2} : Set (CpSq p)) :=
+    Subgroup.subset_closure (Set.mem_insert_of_mem _ rfl)
+  have hb2 : b ^ 2 ∈ Subgroup.closure ({a, a * b ^ 2} : Set (CpSq p)) := by
+    have := mul_mem (inv_mem ha) hab2
+    rwa [inv_mul_cancel_left] at this
+  have : b ∈ Subgroup.zpowers (b ^ 2) := by
+    rw [zpowers_pow (snd_ne_one hgen) (not_dvd_of_ne Nat.prime_two hp2)]
+    exact Subgroup.mem_zpowers b
+  exact Subgroup.zpowers_le.mpr hb2 this
+
+theorem gen_b_ab2 : Subgroup.closure ({b, a * b ^ 2} : Set (CpSq p)) = ⊤ := by
+  refine top_of_mem hgen ?_ (Subgroup.subset_closure (Set.mem_insert _ _))
+  have hb : b ∈ Subgroup.closure ({b, a * b ^ 2} : Set (CpSq p)) :=
+    Subgroup.subset_closure (Set.mem_insert _ _)
+  have hab2 : a * b ^ 2 ∈ Subgroup.closure ({b, a * b ^ 2} : Set (CpSq p)) :=
+    Subgroup.subset_closure (Set.mem_insert_of_mem _ rfl)
+  have hb2 : b ^ 2 ∈ Subgroup.closure ({b, a * b ^ 2} : Set (CpSq p)) :=
+    pow_mem hb 2
+  have hx : (a * b ^ 2) * (b ^ 2)⁻¹ ∈ Subgroup.closure ({b, a * b ^ 2} : Set (CpSq p)) :=
+    mul_mem hab2 (inv_mem hb2)
+  rwa [mul_inv_cancel_right] at hx
+
+theorem gen_ab_ab2 : Subgroup.closure ({a * b, a * b ^ 2} : Set (CpSq p)) = ⊤ := by
+  refine top_of_mem hgen ?_ ?_
+  · have hab : a * b ∈ Subgroup.closure ({a * b, a * b ^ 2} : Set (CpSq p)) :=
+      Subgroup.subset_closure (Set.mem_insert _ _)
+    have hab2 : a * b ^ 2 ∈ Subgroup.closure ({a * b, a * b ^ 2} : Set (CpSq p)) :=
+      Subgroup.subset_closure (Set.mem_insert_of_mem _ rfl)
+    have ea : (a * b) ^ 2 * (a * b ^ 2)⁻¹ = a := by
+      apply Multiplicative.toAdd.injective
+      simp only [toAdd_mul, toAdd_inv, toAdd_pow]; abel
+    have hx : (a * b) ^ 2 * (a * b ^ 2)⁻¹ ∈
+        Subgroup.closure ({a * b, a * b ^ 2} : Set (CpSq p)) :=
+      mul_mem (pow_mem hab 2) (inv_mem hab2)
+    rwa [ea] at hx
+  · have hab : a * b ∈ Subgroup.closure ({a * b, a * b ^ 2} : Set (CpSq p)) :=
+      Subgroup.subset_closure (Set.mem_insert _ _)
+    have hab2 : a * b ^ 2 ∈ Subgroup.closure ({a * b, a * b ^ 2} : Set (CpSq p)) :=
+      Subgroup.subset_closure (Set.mem_insert_of_mem _ rfl)
+    have eb : (a * b ^ 2) * (a * b)⁻¹ = b := by
+      apply Multiplicative.toAdd.injective
+      simp only [toAdd_mul, toAdd_inv, toAdd_pow]; abel
+    have hx : (a * b ^ 2) * (a * b)⁻¹ ∈
+        Subgroup.closure ({a * b, a * b ^ 2} : Set (CpSq p)) :=
+      mul_mem hab2 (inv_mem hab)
+    rwa [eb] at hx
+
+theorem sigma_d1 : sigmaSet a (b ^ 2) =
+    ↑(Subgroup.zpowers a) ∪ ↑(Subgroup.zpowers b) ∪ ↑(Subgroup.zpowers (a * b ^ 2)) := by
+  rw [sigmaSet_of_comm, zpowers_pow (snd_ne_one hgen) (not_dvd_of_ne Nat.prime_two hp2)]
+
+theorem sigma_d2 : sigmaSet a⁻¹ ((a * b) ^ 2) =
+    ↑(Subgroup.zpowers a) ∪ ↑(Subgroup.zpowers (a * b)) ∪ ↑(Subgroup.zpowers (a * b ^ 2)) := by
+  rw [sigmaSet_of_comm, Subgroup.zpowers_inv,
+    zpowers_pow (mul_ne_one hgen) (not_dvd_of_ne Nat.prime_two hp2), elt_eq_2 hgen]
+
+theorem sigma_d3 : sigmaSet b (a * b) =
+    ↑(Subgroup.zpowers b) ∪ ↑(Subgroup.zpowers (a * b)) ∪ ↑(Subgroup.zpowers (a * b ^ 2)) := by
+  rw [sigmaSet_of_comm, elt_eq_3 hgen]
+
+end Dim4
+
+/-- The four generating pairs of the dimension-4 Beauville structure of `C_p²`. -/
+def pairs4 {a b : CpSq p} (hgen : Subgroup.closure ({a, b} : Set (CpSq p)) = ⊤) (hp2 : p ≠ 2) :
+    Fin 4 → GeneratingPair (CpSq p)
+  | 0 => ⟨a, b, hgen⟩
+  | 1 => ⟨a, b ^ 2, gen_a_b2 hgen hp2⟩
+  | 2 => ⟨a⁻¹, (a * b) ^ 2, gen_3 hgen hp2⟩
+  | 3 => ⟨b, a * b, gen_4 hgen hp2⟩
+
+/-- The four Σ-sets of the dimension-4 family meet only in the identity. -/
+theorem inter4_eq_one {a b : CpSq p} (hgen : Subgroup.closure ({a, b} : Set (CpSq p)) = ⊤)
+    (hp2 : p ≠ 2) :
+    (⋂ i, sigmaSet (pairs4 hgen hp2 i).x (pairs4 hgen hp2 i).y) = {1} := by
+  apply Set.eq_singleton_iff_unique_mem.mpr
+  refine ⟨Set.mem_iInter.mpr (fun i => one_mem_sigmaSet _ _), ?_⟩
+  intro g hg
+  rw [Set.mem_iInter] at hg
+  by_contra hg1
+  have h0 : g ∈ sigmaSet a b := hg 0
+  have h1 : g ∈ sigmaSet a (b ^ 2) := hg 1
+  have h2 : g ∈ sigmaSet a⁻¹ ((a * b) ^ 2) := hg 2
+  have h3 : g ∈ sigmaSet b (a * b) := hg 3
+  rw [sigmaSet_of_comm] at h0
+  rw [sigma_d1 hgen hp2] at h1
+  rw [sigma_d2 hgen hp2] at h2
+  rw [sigma_d3 hgen hp2] at h3
+  have ca := card_zpowers_eq_p (fst_ne_one hgen)
+  have cb := card_zpowers_eq_p (snd_ne_one hgen)
+  have cab := card_zpowers_eq_p (mul_ne_one hgen)
+  have cab2 := card_zpowers_eq_p (mul_sq_ne_one hgen)
+  have d12 := zpowers_fst_ne_snd hgen
+  have d13 := zpowers_fst_ne_mul hgen
+  have d23 := zpowers_snd_ne_mul hgen
+  have d14 := zpowers_ne_of_top (gen_a_ab2 hgen hp2)
+  have d24 := zpowers_ne_of_top (gen_b_ab2 hgen hp2)
+  have d34 := zpowers_ne_of_top (gen_ab_ab2 hgen hp2)
+  simp only [Set.mem_union, SetLike.mem_coe] at h0 h1 h2 h3
+  rcases h0 with (hL1 | hL2) | hL3
+  · rcases h3 with (hL2 | hL3) | hL4
+    · exact d12 (eq_of_mem_of_mem hg1 ca cb hL1 hL2)
+    · exact d13 (eq_of_mem_of_mem hg1 ca cab hL1 hL3)
+    · exact d14 (eq_of_mem_of_mem hg1 ca cab2 hL1 hL4)
+  · rcases h2 with (hL1 | hL3) | hL4
+    · exact d12 (eq_of_mem_of_mem hg1 ca cb hL1 hL2)
+    · exact d23 (eq_of_mem_of_mem hg1 cb cab hL2 hL3)
+    · exact d24 (eq_of_mem_of_mem hg1 cb cab2 hL2 hL4)
+  · rcases h1 with (hL1 | hL2) | hL4
+    · exact d13 (eq_of_mem_of_mem hg1 ca cab hL1 hL3)
+    · exact d23 (eq_of_mem_of_mem hg1 cb cab hL2 hL3)
+    · exact d34 (eq_of_mem_of_mem hg1 cab cab2 hL3 hL4)
+
+/-- The dimension-4 generalised Beauville structure of `C_p²` from a generating pair `(a, b)`. -/
+def beauville4 {a b : CpSq p} (hgen : Subgroup.closure ({a, b} : Set (CpSq p)) = ⊤) (hp2 : p ≠ 2) :
+    GeneralisedBeauvilleStructure (CpSq p) where
+  ι := Fin 4
+  pairs := pairs4 hgen hp2
+  inter_sigmaSet_eq_one := inter4_eq_one hgen hp2
+
+theorem primitive4 {a b : CpSq p} (hgen : Subgroup.closure ({a, b} : Set (CpSq p)) = ⊤)
+    (hp2 : p ≠ 2) : (beauville4 hgen hp2).IsPrimitive := by
+  intro S hS
+  have hex : ∃ j : Fin 4, j ∉ S := by
+    by_contra hcon
+    simp only [not_exists, not_not] at hcon
+    exact hS (Finset.eq_univ_iff_forall.mpr hcon)
+  obtain ⟨j, hj⟩ := hex
+  obtain ⟨w, hw1, hwi⟩ : ∃ w : CpSq p, w ≠ 1 ∧
+      ∀ i : Fin 4, i ≠ j → w ∈ sigmaSet (pairs4 hgen hp2 i).x (pairs4 hgen hp2 i).y := by
+    fin_cases j
+    · refine ⟨a * b ^ 2, mul_sq_ne_one hgen, fun i hi => ?_⟩
+      fin_cases i
+      · exact absurd rfl hi
+      · show a * b ^ 2 ∈ sigmaSet a (b ^ 2)
+        rw [sigma_d1 hgen hp2]; exact Or.inr (Subgroup.mem_zpowers _)
+      · show a * b ^ 2 ∈ sigmaSet a⁻¹ ((a * b) ^ 2)
+        rw [sigma_d2 hgen hp2]; exact Or.inr (Subgroup.mem_zpowers _)
+      · show a * b ^ 2 ∈ sigmaSet b (a * b)
+        rw [sigma_d3 hgen hp2]; exact Or.inr (Subgroup.mem_zpowers _)
+    · refine ⟨a * b, mul_ne_one hgen, fun i hi => ?_⟩
+      fin_cases i
+      · show a * b ∈ sigmaSet a b
+        rw [sigmaSet_of_comm]; exact Or.inr (Subgroup.mem_zpowers _)
+      · exact absurd rfl hi
+      · show a * b ∈ sigmaSet a⁻¹ ((a * b) ^ 2)
+        rw [sigma_d2 hgen hp2]; exact Or.inl (Or.inr (Subgroup.mem_zpowers _))
+      · show a * b ∈ sigmaSet b (a * b)
+        rw [sigma_d3 hgen hp2]; exact Or.inl (Or.inr (Subgroup.mem_zpowers _))
+    · refine ⟨b, snd_ne_one hgen, fun i hi => ?_⟩
+      fin_cases i
+      · show b ∈ sigmaSet a b
+        rw [sigmaSet_of_comm]; exact Or.inl (Or.inr (Subgroup.mem_zpowers _))
+      · show b ∈ sigmaSet a (b ^ 2)
+        rw [sigma_d1 hgen hp2]; exact Or.inl (Or.inr (Subgroup.mem_zpowers _))
+      · exact absurd rfl hi
+      · show b ∈ sigmaSet b (a * b)
+        rw [sigma_d3 hgen hp2]; exact Or.inl (Or.inl (Subgroup.mem_zpowers _))
+    · refine ⟨a, fst_ne_one hgen, fun i hi => ?_⟩
+      fin_cases i
+      · show a ∈ sigmaSet a b
+        rw [sigmaSet_of_comm]; exact Or.inl (Or.inl (Subgroup.mem_zpowers _))
+      · show a ∈ sigmaSet a (b ^ 2)
+        rw [sigma_d1 hgen hp2]; exact Or.inl (Or.inl (Subgroup.mem_zpowers _))
+      · show a ∈ sigmaSet a⁻¹ ((a * b) ^ 2)
+        rw [sigma_d2 hgen hp2]; exact Or.inl (Or.inl (Subgroup.mem_zpowers _))
+      · exact absurd rfl hi
+  intro hcontra
+  have hwmem : w ∈ ⋂ i ∈ S, sigmaSet ((beauville4 hgen hp2).pairs i).x
+      ((beauville4 hgen hp2).pairs i).y :=
+    Set.mem_iInter₂.mpr (fun i hi => hwi i (fun e => hj (e ▸ hi)))
+  rw [hcontra, Set.mem_singleton_iff] at hwmem
+  exact hw1 hwmem
+
+/-- The standard basis `(1,0), (0,1)` is a generating pair of `C_p²`. -/
+theorem basis_gen : Subgroup.closure
+    ({Multiplicative.ofAdd (1, 0), Multiplicative.ofAdd (0, 1)} : Set (CpSq p)) = ⊤ := by
+  apply closure_eq_top
+  · intro h
+    have h2 : ((1 : ZMod p), (0 : ZMod p)) = 0 := by
+      have h3 := congrArg Multiplicative.toAdd h
+      simp only [toAdd_ofAdd, toAdd_one] at h3
+      exact h3
+    rw [Prod.ext_iff] at h2
+    exact one_ne_zero h2.1
+  · apply not_mem_zpowers_of_hom (AddMonoidHom.snd (ZMod p) (ZMod p))
+    · simp
+    · simp
+
+/-- **`4 ∈ BSpec(C_p²)`** for odd primes `p`. -/
+theorem four_mem_BSpec (hp2 : p ≠ 2) : 4 ∈ BeauvilleSpectrum (CpSq p) :=
+  ⟨beauville4 basis_gen hp2, primitive4 basis_gen hp2, by
+    rw [GeneralisedBeauvilleStructure.dimension]; exact Fintype.card_fin 4⟩
+
+/-- **Proposition.** For odd primes `p`, the maximum of `BSpec(C_p²)` is `4`. -/
+theorem isGreatest_BSpec (hp2 : p ≠ 2) : IsGreatest (BeauvilleSpectrum (CpSq p)) 4 :=
+  ⟨four_mem_BSpec hp2, by
+    rintro d ⟨B, hBprim, rfl⟩
+    exact dimension_le_four B hBprim⟩
 
 end CpSq
