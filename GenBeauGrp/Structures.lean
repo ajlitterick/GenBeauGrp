@@ -26,6 +26,12 @@ def GeneralisedBeauvilleStructure.IsPrimitive {G : Type*} [Group G]
   ∀ S : Finset B.ι, S ≠ Finset.univ →
     (⋂ i ∈ S, sigmaSet (B.pairs i).x (B.pairs i).y) ≠ {1}
 
+/-- The **Beauville spectrum** of a group `G`: the set of dimensions of its primitive
+generalised Beauville structures. If `G` is not a generalised Beauville group it has no
+generalised Beauville structures at all, so this set is automatically empty. -/
+def BeauvilleSpectrum (G : Type*) [Group G] : Set ℕ :=
+  { d | ∃ B : GeneralisedBeauvilleStructure.{_, 0} G, B.IsPrimitive ∧ B.dimension = d }
+
 /-- **Existence of a Σ-set not containing a given set.** If `X ⊆ G` contains a non-identity
 element, then in any generalised Beauville structure `B` of `G` some Σ-set fails to contain `X`.
 (If every Σ-set contained `X`, its non-identity element would lie in `⋂ᵢ Σᵢ = {1}`.) -/
