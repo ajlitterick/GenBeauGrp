@@ -16,3 +16,12 @@ i.e. the cardinality of the indexing type. -/
 def GeneralisedBeauvilleStructure.dimension {G : Type*} [Group G]
     (B : GeneralisedBeauvilleStructure G) : ℕ :=
   Fintype.card B.ι
+
+/-- A generalised Beauville structure is **primitive** if no proper subcollection of its
+Σ-sets is itself a generalised Beauville structure. Equivalently, for every proper subset `S`
+of the index type the corresponding Σ-sets meet in more than just the identity (so removing any
+indices breaks the defining intersection condition). -/
+def GeneralisedBeauvilleStructure.IsPrimitive {G : Type*} [Group G]
+    (B : GeneralisedBeauvilleStructure G) : Prop :=
+  ∀ S : Finset B.ι, S ≠ Finset.univ →
+    (⋂ i ∈ S, sigmaSet (B.pairs i).x (B.pairs i).y) ≠ {1}
