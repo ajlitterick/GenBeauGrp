@@ -574,4 +574,223 @@ theorem isGreatest_BSpec (hp2 : p ≠ 2) : IsGreatest (BeauvilleSpectrum (CpSq p
     rintro d ⟨B, hBprim, rfl⟩
     exact dimension_le_four B hBprim⟩
 
+/-! ### External input: the minimum (Remark / Carta–Fairbairn, Thm 2.9) -/
+
+/-- **Remark (Carta–Fairbairn, Generalised Beauville Groups, Thm 2.9).** For odd primes `p`, the
+minimum of `BSpec(C_p²)` is `4` when `p = 3` and `2` otherwise. This is quoted from the literature
+and is the single externally-cited input; it is not proved here. -/
+theorem isLeast_BSpec (hp2 : p ≠ 2) :
+    IsLeast (BeauvilleSpectrum (CpSq p)) (if p = 3 then 4 else 2) := sorry
+
+/-! ### The dimension-three construction (for `p ≥ 5`)
+
+The three pairs are `(a, b)`, `(a, b²)`, `((a*b)⁻¹, (a*b²)²)`; the constituent lines are
+`⟨a⟩, ⟨b⟩, ⟨a*b⟩, ⟨a*b²⟩, ⟨a*b³⟩`, the last requiring `p ≠ 3` to be distinct from `⟨a⟩`. -/
+
+section Dim3
+
+variable {a b : CpSq p} (hgen : Subgroup.closure ({a, b} : Set (CpSq p)) = ⊤)
+  (hp2 : p ≠ 2) (hp3 : p ≠ 3)
+
+include hgen
+
+theorem elt_eq_5 : (a * b)⁻¹ * (a * b ^ 2) ^ 2 = a * b ^ 3 := by
+  apply Multiplicative.toAdd.injective
+  simp only [toAdd_mul, toAdd_inv, toAdd_pow]; abel
+
+theorem elt_eq_6 : (a * b)⁻¹ * (a * b ^ 2) = b := by
+  apply Multiplicative.toAdd.injective
+  simp only [toAdd_mul, toAdd_inv, toAdd_pow]; abel
+
+theorem mul_cube_ne_one : a * b ^ 3 ≠ 1 := by
+  intro h
+  refine not_mem_of_zpowers_ne (fst_ne_one hgen) (card_zpowers_eq_p (snd_ne_one hgen))
+    (zpowers_fst_ne_snd hgen) ?_
+  rw [eq_inv_of_mul_eq_one_left h]
+  exact inv_mem (pow_mem (Subgroup.mem_zpowers b) 3)
+
+include hp2
+
+theorem gen3_pair2 : Subgroup.closure ({(a * b)⁻¹, (a * b ^ 2) ^ 2} : Set (CpSq p)) = ⊤ := by
+  have hab_inv : (a * b)⁻¹ ∈ Subgroup.closure ({(a * b)⁻¹, (a * b ^ 2) ^ 2} : Set (CpSq p)) :=
+    Subgroup.subset_closure (Set.mem_insert _ _)
+  have hab2sq : (a * b ^ 2) ^ 2 ∈
+      Subgroup.closure ({(a * b)⁻¹, (a * b ^ 2) ^ 2} : Set (CpSq p)) :=
+    Subgroup.subset_closure (Set.mem_insert_of_mem _ rfl)
+  have hab : a * b ∈ Subgroup.closure ({(a * b)⁻¹, (a * b ^ 2) ^ 2} : Set (CpSq p)) := by
+    simpa using inv_mem hab_inv
+  have hab2 : a * b ^ 2 ∈ Subgroup.closure ({(a * b)⁻¹, (a * b ^ 2) ^ 2} : Set (CpSq p)) := by
+    have h := Subgroup.zpowers_le.mpr hab2sq
+    rw [zpowers_pow (mul_sq_ne_one hgen) (not_dvd_of_ne Nat.prime_two hp2)] at h
+    exact h (Subgroup.mem_zpowers _)
+  have hb : b ∈ Subgroup.closure ({(a * b)⁻¹, (a * b ^ 2) ^ 2} : Set (CpSq p)) := by
+    have hx := mul_mem (inv_mem hab) hab2
+    rwa [elt_eq_6 hgen] at hx
+  refine top_of_mem hgen ?_ hb
+  have hx := mul_mem hab (inv_mem hb)
+  rwa [mul_inv_cancel_right] at hx
+
+theorem sigma_e2 : sigmaSet (a * b)⁻¹ ((a * b ^ 2) ^ 2) =
+    ↑(Subgroup.zpowers (a * b)) ∪ ↑(Subgroup.zpowers (a * b ^ 2)) ∪
+      ↑(Subgroup.zpowers (a * b ^ 3)) := by
+  rw [sigmaSet_of_comm, Subgroup.zpowers_inv,
+    zpowers_pow (mul_sq_ne_one hgen) (not_dvd_of_ne Nat.prime_two hp2), elt_eq_5 hgen]
+
+include hp3
+
+theorem gen_a_ab3 : Subgroup.closure ({a, a * b ^ 3} : Set (CpSq p)) = ⊤ := by
+  refine top_of_mem hgen (Subgroup.subset_closure (Set.mem_insert _ _)) ?_
+  have ha : a ∈ Subgroup.closure ({a, a * b ^ 3} : Set (CpSq p)) :=
+    Subgroup.subset_closure (Set.mem_insert _ _)
+  have hab3 : a * b ^ 3 ∈ Subgroup.closure ({a, a * b ^ 3} : Set (CpSq p)) :=
+    Subgroup.subset_closure (Set.mem_insert_of_mem _ rfl)
+  have hb3 : b ^ 3 ∈ Subgroup.closure ({a, a * b ^ 3} : Set (CpSq p)) := by
+    have := mul_mem (inv_mem ha) hab3
+    rwa [inv_mul_cancel_left] at this
+  have : b ∈ Subgroup.zpowers (b ^ 3) := by
+    rw [zpowers_pow (snd_ne_one hgen) (not_dvd_of_ne Nat.prime_three hp3)]
+    exact Subgroup.mem_zpowers b
+  exact Subgroup.zpowers_le.mpr hb3 this
+
+theorem gen_b_ab3 : Subgroup.closure ({b, a * b ^ 3} : Set (CpSq p)) = ⊤ := by
+  refine top_of_mem hgen ?_ (Subgroup.subset_closure (Set.mem_insert _ _))
+  have hb : b ∈ Subgroup.closure ({b, a * b ^ 3} : Set (CpSq p)) :=
+    Subgroup.subset_closure (Set.mem_insert _ _)
+  have hab3 : a * b ^ 3 ∈ Subgroup.closure ({b, a * b ^ 3} : Set (CpSq p)) :=
+    Subgroup.subset_closure (Set.mem_insert_of_mem _ rfl)
+  have hb3 : b ^ 3 ∈ Subgroup.closure ({b, a * b ^ 3} : Set (CpSq p)) := pow_mem hb 3
+  have hx : (a * b ^ 3) * (b ^ 3)⁻¹ ∈ Subgroup.closure ({b, a * b ^ 3} : Set (CpSq p)) :=
+    mul_mem hab3 (inv_mem hb3)
+  rwa [mul_inv_cancel_right] at hx
+
+end Dim3
+
+/-- The three generating pairs of the dimension-3 Beauville structure of `C_p²` (`p ≥ 5`). -/
+def pairs3 {a b : CpSq p} (hgen : Subgroup.closure ({a, b} : Set (CpSq p)) = ⊤) (hp2 : p ≠ 2)
+    (_hp3 : p ≠ 3) : Fin 3 → GeneratingPair (CpSq p)
+  | 0 => ⟨a, b, hgen⟩
+  | 1 => ⟨a, b ^ 2, gen_a_b2 hgen hp2⟩
+  | 2 => ⟨(a * b)⁻¹, (a * b ^ 2) ^ 2, gen3_pair2 hgen hp2⟩
+
+theorem inter3_eq_one {a b : CpSq p} (hgen : Subgroup.closure ({a, b} : Set (CpSq p)) = ⊤)
+    (hp2 : p ≠ 2) (hp3 : p ≠ 3) :
+    (⋂ i, sigmaSet (pairs3 hgen hp2 hp3 i).x (pairs3 hgen hp2 hp3 i).y) = {1} := by
+  apply Set.eq_singleton_iff_unique_mem.mpr
+  refine ⟨Set.mem_iInter.mpr (fun i => one_mem_sigmaSet _ _), ?_⟩
+  intro g hg
+  rw [Set.mem_iInter] at hg
+  by_contra hg1
+  have h0 : g ∈ sigmaSet a b := hg 0
+  have h1 : g ∈ sigmaSet a (b ^ 2) := hg 1
+  have h2 : g ∈ sigmaSet (a * b)⁻¹ ((a * b ^ 2) ^ 2) := hg 2
+  rw [sigmaSet_of_comm] at h0
+  rw [sigma_d1 hgen hp2] at h1
+  rw [sigma_e2 hgen hp2] at h2
+  have ca := card_zpowers_eq_p (fst_ne_one hgen)
+  have cb := card_zpowers_eq_p (snd_ne_one hgen)
+  have cab := card_zpowers_eq_p (mul_ne_one hgen)
+  have cab2 := card_zpowers_eq_p (mul_sq_ne_one hgen)
+  have cab3 := card_zpowers_eq_p (mul_cube_ne_one hgen)
+  have d13 := zpowers_fst_ne_mul hgen
+  have d23 := zpowers_snd_ne_mul hgen
+  have d14 := zpowers_ne_of_top (gen_a_ab2 hgen hp2)
+  have d24 := zpowers_ne_of_top (gen_b_ab2 hgen hp2)
+  have d34 := zpowers_ne_of_top (gen_ab_ab2 hgen hp2)
+  have d15 := zpowers_ne_of_top (gen_a_ab3 hgen hp2 hp3)
+  have d25 := zpowers_ne_of_top (gen_b_ab3 hgen hp2 hp3)
+  simp only [Set.mem_union, SetLike.mem_coe] at h0 h1 h2
+  rcases h0 with (hL1 | hL2) | hL3
+  · rcases h2 with (hL3 | hL4) | hL5
+    · exact d13 (eq_of_mem_of_mem hg1 ca cab hL1 hL3)
+    · exact d14 (eq_of_mem_of_mem hg1 ca cab2 hL1 hL4)
+    · exact d15 (eq_of_mem_of_mem hg1 ca cab3 hL1 hL5)
+  · rcases h2 with (hL3 | hL4) | hL5
+    · exact d23 (eq_of_mem_of_mem hg1 cb cab hL2 hL3)
+    · exact d24 (eq_of_mem_of_mem hg1 cb cab2 hL2 hL4)
+    · exact d25 (eq_of_mem_of_mem hg1 cb cab3 hL2 hL5)
+  · rcases h1 with (hL1 | hL2) | hL4
+    · exact d13 (eq_of_mem_of_mem hg1 ca cab hL1 hL3)
+    · exact d23 (eq_of_mem_of_mem hg1 cb cab hL2 hL3)
+    · exact d34 (eq_of_mem_of_mem hg1 cab cab2 hL3 hL4)
+
+/-- The dimension-3 generalised Beauville structure of `C_p²` (for `p ≥ 5`). -/
+def beauville3 {a b : CpSq p} (hgen : Subgroup.closure ({a, b} : Set (CpSq p)) = ⊤) (hp2 : p ≠ 2)
+    (hp3 : p ≠ 3) : GeneralisedBeauvilleStructure (CpSq p) where
+  ι := Fin 3
+  pairs := pairs3 hgen hp2 hp3
+  inter_sigmaSet_eq_one := inter3_eq_one hgen hp2 hp3
+
+theorem primitive3 {a b : CpSq p} (hgen : Subgroup.closure ({a, b} : Set (CpSq p)) = ⊤)
+    (hp2 : p ≠ 2) (hp3 : p ≠ 3) : (beauville3 hgen hp2 hp3).IsPrimitive := by
+  intro S hS
+  have hex : ∃ j : Fin 3, j ∉ S := by
+    by_contra hcon
+    simp only [not_exists, not_not] at hcon
+    exact hS (Finset.eq_univ_iff_forall.mpr hcon)
+  obtain ⟨j, hj⟩ := hex
+  obtain ⟨w, hw1, hwi⟩ : ∃ w : CpSq p, w ≠ 1 ∧
+      ∀ i : Fin 3, i ≠ j → w ∈ sigmaSet (pairs3 hgen hp2 hp3 i).x (pairs3 hgen hp2 hp3 i).y := by
+    fin_cases j
+    · refine ⟨a * b ^ 2, mul_sq_ne_one hgen, fun i hi => ?_⟩
+      fin_cases i
+      · exact absurd rfl hi
+      · show a * b ^ 2 ∈ sigmaSet a (b ^ 2)
+        rw [sigma_d1 hgen hp2]; exact Or.inr (Subgroup.mem_zpowers _)
+      · show a * b ^ 2 ∈ sigmaSet (a * b)⁻¹ ((a * b ^ 2) ^ 2)
+        rw [sigma_e2 hgen hp2]; exact Or.inl (Or.inr (Subgroup.mem_zpowers _))
+    · refine ⟨a * b, mul_ne_one hgen, fun i hi => ?_⟩
+      fin_cases i
+      · show a * b ∈ sigmaSet a b
+        rw [sigmaSet_of_comm]; exact Or.inr (Subgroup.mem_zpowers _)
+      · exact absurd rfl hi
+      · show a * b ∈ sigmaSet (a * b)⁻¹ ((a * b ^ 2) ^ 2)
+        rw [sigma_e2 hgen hp2]; exact Or.inl (Or.inl (Subgroup.mem_zpowers _))
+    · refine ⟨a, fst_ne_one hgen, fun i hi => ?_⟩
+      fin_cases i
+      · show a ∈ sigmaSet a b
+        rw [sigmaSet_of_comm]; exact Or.inl (Or.inl (Subgroup.mem_zpowers _))
+      · show a ∈ sigmaSet a (b ^ 2)
+        rw [sigma_d1 hgen hp2]; exact Or.inl (Or.inl (Subgroup.mem_zpowers _))
+      · exact absurd rfl hi
+  intro hcontra
+  have hwmem : w ∈ ⋂ i ∈ S, sigmaSet ((beauville3 hgen hp2 hp3).pairs i).x
+      ((beauville3 hgen hp2 hp3).pairs i).y :=
+    Set.mem_iInter₂.mpr (fun i hi => hwi i (fun e => hj (e ▸ hi)))
+  rw [hcontra, Set.mem_singleton_iff] at hwmem
+  exact hw1 hwmem
+
+/-- **`3 ∈ BSpec(C_p²)`** for primes `p ≥ 5`. -/
+theorem three_mem_BSpec (hp2 : p ≠ 2) (hp3 : p ≠ 3) : 3 ∈ BeauvilleSpectrum (CpSq p) :=
+  ⟨beauville3 basis_gen hp2 hp3, primitive3 basis_gen hp2 hp3, by
+    rw [GeneralisedBeauvilleStructure.dimension]; exact Fintype.card_fin 3⟩
+
+/-- **Corollary.** For odd primes `p`, `BSpec(C_p²) = {4}` if `p = 3` and `{2, 3, 4}` otherwise. -/
+theorem BSpec_eq (hp2 : p ≠ 2) :
+    BeauvilleSpectrum (CpSq p) = if p = 3 then ({4} : Set ℕ) else {2, 3, 4} := by
+  by_cases hp3 : p = 3
+  · subst hp3
+    rw [if_pos rfl]
+    apply Set.eq_of_subset_of_subset
+    · intro d hd
+      have hle := (isGreatest_BSpec hp2).2 hd
+      have hge := (isLeast_BSpec hp2).2 hd
+      rw [if_pos rfl] at hge
+      simp only [Set.mem_singleton_iff]; omega
+    · intro d hd
+      simp only [Set.mem_singleton_iff] at hd; subst hd
+      exact four_mem_BSpec hp2
+  · rw [if_neg hp3]
+    apply Set.eq_of_subset_of_subset
+    · intro d hd
+      have hle := (isGreatest_BSpec hp2).2 hd
+      have hge := (isLeast_BSpec hp2).2 hd
+      rw [if_neg hp3] at hge
+      simp only [Set.mem_insert_iff, Set.mem_singleton_iff]; omega
+    · intro d hd
+      simp only [Set.mem_insert_iff, Set.mem_singleton_iff] at hd
+      rcases hd with rfl | rfl | rfl
+      · have h2 := (isLeast_BSpec hp2).1; rwa [if_neg hp3] at h2
+      · exact three_mem_BSpec hp2 hp3
+      · exact four_mem_BSpec hp2
+
 end CpSq
