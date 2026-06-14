@@ -22,7 +22,7 @@ variable {p : ℕ} [Fact p.Prime]
 
 instance : NeZero p := ⟨(Fact.out : p.Prime).ne_zero⟩
 
-/-- Every element of `C_p²` satisfies `g ^ p = 1` (the group has exponent `p`). -/
+/-- Every element of `C_n²` satisfies `g ^ n = 1` (the group has exponent `n`). -/
 theorem pow_eq_one {n : ℕ} (g : CpSq n) : g ^ n = 1 := by
   have h : (n : ℕ) • (Multiplicative.toAdd g) = 0 := by ext <;> simp [nsmul_eq_mul]
   apply Multiplicative.toAdd.injective
