@@ -309,13 +309,13 @@ theorem pow_not_mem_of_zpowers_ne {x v : CpSq p} (hx : x ≠ 1) (hv : v ≠ 1) {
 
 /-- If `c ∈ ⟨u⟩` but `d ∉ ⟨u⟩`, then `c * d ∉ ⟨u⟩`. -/
 theorem mul_not_mem_left {u c d : CpSq p} (hc : c ∈ Subgroup.zpowers u)
-    (hd : d ∉ Subgroup.zpowers u) : c * d ∉ Subgroup.zpowers u := fun h =>
-  hd (by have := mul_mem (inv_mem hc) h; rwa [inv_mul_cancel_left] at this)
+    (hd : d ∉ Subgroup.zpowers u) : c * d ∉ Subgroup.zpowers u :=
+  fun h => hd ((Subgroup.mul_mem_cancel_left _ hc).mp h)
 
 /-- If `c ∉ ⟨u⟩` but `d ∈ ⟨u⟩`, then `c * d ∉ ⟨u⟩`. -/
 theorem mul_not_mem_right {u c d : CpSq p} (hc : c ∉ Subgroup.zpowers u)
-    (hd : d ∈ Subgroup.zpowers u) : c * d ∉ Subgroup.zpowers u := fun h =>
-  hc (by have := mul_mem h (inv_mem hd); rwa [mul_inv_cancel_right] at this)
+    (hd : d ∈ Subgroup.zpowers u) : c * d ∉ Subgroup.zpowers u :=
+  fun h => hc ((Subgroup.mul_mem_cancel_right _ hd).mp h)
 
 /-- For a prime `p ≠ k` (with `k` prime), `p` does not divide `k`. -/
 theorem not_dvd_of_ne {k : ℕ} (hk : k.Prime) (h : p ≠ k) : ¬ p ∣ k := by
@@ -330,6 +330,25 @@ theorem closure_eq_top_of_zpowers_ne {x y : CpSq p} (hx : x ≠ 1) (hy : y ≠ 1
     (hne : Subgroup.zpowers x ≠ Subgroup.zpowers y) :
     Subgroup.closure ({x, y} : Set (CpSq p)) = ⊤ :=
   closure_eq_top hx (not_mem_of_zpowers_ne hy (card_zpowers_eq_p hx) (Ne.symm hne))
+
+/-- **Distinct lines, first coordinate.** For a generating pair `(a, b)` and `p ∤ n`, the element
+`a * bⁿ` lies off the line `⟨a⟩`, so `⟨a⟩ ≠ ⟨a*bⁿ⟩`. -/
+theorem zpowers_fst_ne_mul_pow {a b : CpSq p}
+    (hgen : Subgroup.closure ({a, b} : Set (CpSq p)) = ⊤) {n : ℕ} (hn : ¬ p ∣ n) :
+    Subgroup.zpowers a ≠ Subgroup.zpowers (a * b ^ n) :=
+  zpowers_ne_of_not_mem (mul_not_mem_left (Subgroup.mem_zpowers a)
+    (pow_not_mem_of_zpowers_ne (fst_ne_one hgen) (snd_ne_one hgen) hn
+      (zpowers_fst_ne_snd hgen).symm))
+
+/-- **Distinct lines, second coordinate.** For a generating pair `(a, b)`, the element `a * bⁿ`
+lies off the line `⟨b⟩` (no condition on `n`), so `⟨b⟩ ≠ ⟨a*bⁿ⟩`. -/
+theorem zpowers_snd_ne_mul_pow {a b : CpSq p}
+    (hgen : Subgroup.closure ({a, b} : Set (CpSq p)) = ⊤) (n : ℕ) :
+    Subgroup.zpowers b ≠ Subgroup.zpowers (a * b ^ n) :=
+  zpowers_ne_of_not_mem (mul_not_mem_right
+    (not_mem_of_zpowers_ne (fst_ne_one hgen) (card_zpowers_eq_p (snd_ne_one hgen))
+      (zpowers_fst_ne_snd hgen))
+    (pow_mem (Subgroup.mem_zpowers b) n))
 
 /-! ### The dimension-four construction
 
@@ -362,15 +381,10 @@ include hp2
 /-! The three "extra" lines `⟨a⟩, ⟨b⟩, ⟨a*b⟩` are each distinct from `⟨a*b²⟩`. -/
 
 theorem zpowers_fst_ne_mul_sq : Subgroup.zpowers a ≠ Subgroup.zpowers (a * b ^ 2) :=
-  zpowers_ne_of_not_mem (mul_not_mem_left (Subgroup.mem_zpowers a)
-    (pow_not_mem_of_zpowers_ne (fst_ne_one hgen) (snd_ne_one hgen)
-      (not_dvd_of_ne Nat.prime_two hp2) (zpowers_fst_ne_snd hgen).symm))
+  zpowers_fst_ne_mul_pow hgen (not_dvd_of_ne Nat.prime_two hp2)
 
 theorem zpowers_snd_ne_mul_sq : Subgroup.zpowers b ≠ Subgroup.zpowers (a * b ^ 2) :=
-  zpowers_ne_of_not_mem (mul_not_mem_right
-    (not_mem_of_zpowers_ne (fst_ne_one hgen) (card_zpowers_eq_p (snd_ne_one hgen))
-      (zpowers_fst_ne_snd hgen))
-    (pow_mem (Subgroup.mem_zpowers b) 2))
+  zpowers_snd_ne_mul_pow hgen 2
 
 theorem zpowers_mul_ne_mul_sq : Subgroup.zpowers (a * b) ≠ Subgroup.zpowers (a * b ^ 2) := by
   refine zpowers_ne_of_not_mem ?_
@@ -615,15 +629,10 @@ include hp3
 /-! The two lines `⟨a⟩, ⟨b⟩` are distinct from `⟨a*b³⟩` (the former needs `p ≠ 3`). -/
 
 theorem zpowers_fst_ne_mul_cube : Subgroup.zpowers a ≠ Subgroup.zpowers (a * b ^ 3) :=
-  zpowers_ne_of_not_mem (mul_not_mem_left (Subgroup.mem_zpowers a)
-    (pow_not_mem_of_zpowers_ne (fst_ne_one hgen) (snd_ne_one hgen)
-      (not_dvd_of_ne Nat.prime_three hp3) (zpowers_fst_ne_snd hgen).symm))
+  zpowers_fst_ne_mul_pow hgen (not_dvd_of_ne Nat.prime_three hp3)
 
 theorem zpowers_snd_ne_mul_cube : Subgroup.zpowers b ≠ Subgroup.zpowers (a * b ^ 3) :=
-  zpowers_ne_of_not_mem (mul_not_mem_right
-    (not_mem_of_zpowers_ne (fst_ne_one hgen) (card_zpowers_eq_p (snd_ne_one hgen))
-      (zpowers_fst_ne_snd hgen))
-    (pow_mem (Subgroup.mem_zpowers b) 3))
+  zpowers_snd_ne_mul_pow hgen 3
 
 end Dim3
 
