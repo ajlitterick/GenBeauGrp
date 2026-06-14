@@ -278,20 +278,44 @@ theorem closure_eq_top {x y : CpSq p} (hx : x ≠ 1) (hy : y ∉ Subgroup.zpower
     apply Subgroup.eq_top_of_card_eq
     rw [hkeq, hk, card_eq]
 
+/-- A non-identity element of `C_p²` raised to a power coprime to `p` is again non-identity. -/
+theorem pow_ne_one_of_not_dvd {x : CpSq p} (hx : x ≠ 1) {n : ℕ} (hn : ¬ p ∣ n) : x ^ n ≠ 1 := by
+  intro h
+  have hd : orderOf x ∣ n := orderOf_dvd_of_pow_eq_one h
+  rw [orderOf_eq_p hx] at hd
+  exact hn hd
+
 /-- Raising a non-identity element of `C_p²` to a power coprime to `p` keeps the same line. -/
 theorem zpowers_pow {x : CpSq p} (hx : x ≠ 1) {n : ℕ} (hn : ¬ p ∣ n) :
-    Subgroup.zpowers (x ^ n) = Subgroup.zpowers x := by
-  have hxn : x ^ n ≠ 1 := by
-    intro h
-    have hd : orderOf x ∣ n := orderOf_dvd_of_pow_eq_one h
-    rw [orderOf_eq_p hx] at hd
-    exact hn hd
-  exact zpowers_eq_of_mem hxn (card_zpowers_eq_p hx) (pow_mem (Subgroup.mem_zpowers x) n)
+    Subgroup.zpowers (x ^ n) = Subgroup.zpowers x :=
+  zpowers_eq_of_mem (pow_ne_one_of_not_dvd hx hn) (card_zpowers_eq_p hx)
+    (pow_mem (Subgroup.mem_zpowers x) n)
 
 /-- If the line `⟨x⟩` differs from an order-`p` subgroup `H`, then `x ∉ H`. -/
 theorem not_mem_of_zpowers_ne {x : CpSq p} (hx : x ≠ 1) {H : Subgroup (CpSq p)}
     (hcard : Nat.card H = p) (hne : Subgroup.zpowers x ≠ H) : x ∉ H :=
   fun hmem => hne (zpowers_eq_of_mem hx hcard hmem)
+
+/-- `⟨x⟩ ≠ ⟨y⟩` whenever `y` lies off the line `⟨x⟩`. -/
+theorem zpowers_ne_of_not_mem {x y : CpSq p} (hxy : y ∉ Subgroup.zpowers x) :
+    Subgroup.zpowers x ≠ Subgroup.zpowers y :=
+  fun h => hxy (h.symm ▸ Subgroup.mem_zpowers y)
+
+/-- A power of a generator off the line `⟨x⟩`: if `⟨v⟩ ≠ ⟨x⟩` and `p ∤ n` then `v ^ n ∉ ⟨x⟩`. -/
+theorem pow_not_mem_of_zpowers_ne {x v : CpSq p} (hx : x ≠ 1) (hv : v ≠ 1) {n : ℕ}
+    (hn : ¬ p ∣ n) (hne : Subgroup.zpowers v ≠ Subgroup.zpowers x) : v ^ n ∉ Subgroup.zpowers x :=
+  not_mem_of_zpowers_ne (pow_ne_one_of_not_dvd hv hn) (card_zpowers_eq_p hx)
+    (by rwa [zpowers_pow hv hn])
+
+/-- If `c ∈ ⟨u⟩` but `d ∉ ⟨u⟩`, then `c * d ∉ ⟨u⟩`. -/
+theorem mul_not_mem_left {u c d : CpSq p} (hc : c ∈ Subgroup.zpowers u)
+    (hd : d ∉ Subgroup.zpowers u) : c * d ∉ Subgroup.zpowers u := fun h =>
+  hd (by have := mul_mem (inv_mem hc) h; rwa [inv_mul_cancel_left] at this)
+
+/-- If `c ∉ ⟨u⟩` but `d ∈ ⟨u⟩`, then `c * d ∉ ⟨u⟩`. -/
+theorem mul_not_mem_right {u c d : CpSq p} (hc : c ∉ Subgroup.zpowers u)
+    (hd : d ∈ Subgroup.zpowers u) : c * d ∉ Subgroup.zpowers u := fun h =>
+  hc (by have := mul_mem h (inv_mem hd); rwa [mul_inv_cancel_right] at this)
 
 /-- For a prime `p ≠ k` (with `k` prime), `p` does not divide `k`. -/
 theorem not_dvd_of_ne {k : ℕ} (hk : k.Prime) (h : p ≠ k) : ¬ p ∣ k := by
@@ -300,11 +324,12 @@ theorem not_dvd_of_ne {k : ℕ} (hk : k.Prime) (h : p ≠ k) : ¬ p ∣ k := by
   · exact (Fact.out : p.Prime).ne_one h1
   · exact h h2
 
-/-- Two distinct lines generate, so coinciding lines fail to generate. -/
-theorem zpowers_ne_of_top {u v : CpSq p}
-    (htop : Subgroup.closure ({u, v} : Set (CpSq p)) = ⊤) :
-    Subgroup.zpowers u ≠ Subgroup.zpowers v := fun h =>
-  zpowers_ne_top u (top_of_mem htop (Subgroup.mem_zpowers u) (h.symm ▸ Subgroup.mem_zpowers v))
+/-- **Generation from distinct lines.** Two non-identity elements of `C_p²` generating different
+cyclic subgroups generate the whole group. -/
+theorem closure_eq_top_of_zpowers_ne {x y : CpSq p} (hx : x ≠ 1) (hy : y ≠ 1)
+    (hne : Subgroup.zpowers x ≠ Subgroup.zpowers y) :
+    Subgroup.closure ({x, y} : Set (CpSq p)) = ⊤ :=
+  closure_eq_top hx (not_mem_of_zpowers_ne hy (card_zpowers_eq_p hx) (Ne.symm hne))
 
 /-! ### The dimension-four construction
 
@@ -334,93 +359,59 @@ theorem mul_sq_ne_one : a * b ^ 2 ≠ 1 := by
 
 include hp2
 
-theorem gen_a_b2 : Subgroup.closure ({a, b ^ 2} : Set (CpSq p)) = ⊤ := by
-  refine top_of_mem hgen (Subgroup.subset_closure (Set.mem_insert _ _)) ?_
-  have hb2 : b ^ 2 ∈ Subgroup.closure ({a, b ^ 2} : Set (CpSq p)) :=
-    Subgroup.subset_closure (Set.mem_insert_of_mem _ rfl)
-  have : b ∈ Subgroup.zpowers (b ^ 2) := by
-    rw [zpowers_pow (snd_ne_one hgen) (not_dvd_of_ne Nat.prime_two hp2)]
-    exact Subgroup.mem_zpowers b
-  exact Subgroup.zpowers_le.mpr hb2 this
+/-! The three "extra" lines `⟨a⟩, ⟨b⟩, ⟨a*b⟩` are each distinct from `⟨a*b²⟩`. -/
 
-theorem gen_3 : Subgroup.closure ({a⁻¹, (a * b) ^ 2} : Set (CpSq p)) = ⊤ := by
-  refine top_of_mem hgen ?_ ?_
-  · have ha : a⁻¹ ∈ Subgroup.closure ({a⁻¹, (a * b) ^ 2} : Set (CpSq p)) :=
-      Subgroup.subset_closure (Set.mem_insert _ _)
-    simpa using inv_mem ha
-  · have hai : a⁻¹ ∈ Subgroup.closure ({a⁻¹, (a * b) ^ 2} : Set (CpSq p)) :=
-      Subgroup.subset_closure (Set.mem_insert _ _)
-    have hab2 : (a * b) ^ 2 ∈ Subgroup.closure ({a⁻¹, (a * b) ^ 2} : Set (CpSq p)) :=
-      Subgroup.subset_closure (Set.mem_insert_of_mem _ rfl)
-    have hab : a * b ∈ Subgroup.closure ({a⁻¹, (a * b) ^ 2} : Set (CpSq p)) := by
-      have : a * b ∈ Subgroup.zpowers ((a * b) ^ 2) := by
-        rw [zpowers_pow (mul_ne_one hgen) (not_dvd_of_ne Nat.prime_two hp2)]
-        exact Subgroup.mem_zpowers _
-      exact Subgroup.zpowers_le.mpr hab2 this
-    have hx : a⁻¹ * (a * b) ∈ Subgroup.closure ({a⁻¹, (a * b) ^ 2} : Set (CpSq p)) :=
-      mul_mem hai hab
-    rwa [inv_mul_cancel_left] at hx
+theorem zpowers_fst_ne_mul_sq : Subgroup.zpowers a ≠ Subgroup.zpowers (a * b ^ 2) :=
+  zpowers_ne_of_not_mem (mul_not_mem_left (Subgroup.mem_zpowers a)
+    (pow_not_mem_of_zpowers_ne (fst_ne_one hgen) (snd_ne_one hgen)
+      (not_dvd_of_ne Nat.prime_two hp2) (zpowers_fst_ne_snd hgen).symm))
 
-theorem gen_4 : Subgroup.closure ({b, a * b} : Set (CpSq p)) = ⊤ := by
-  refine top_of_mem hgen ?_ (Subgroup.subset_closure (Set.mem_insert _ _))
-  have hb : b ∈ Subgroup.closure ({b, a * b} : Set (CpSq p)) :=
-    Subgroup.subset_closure (Set.mem_insert _ _)
-  have hab : a * b ∈ Subgroup.closure ({b, a * b} : Set (CpSq p)) :=
-    Subgroup.subset_closure (Set.mem_insert_of_mem _ rfl)
-  have hx : (a * b) * b⁻¹ ∈ Subgroup.closure ({b, a * b} : Set (CpSq p)) :=
-    mul_mem hab (inv_mem hb)
-  rwa [mul_inv_cancel_right] at hx
+theorem zpowers_snd_ne_mul_sq : Subgroup.zpowers b ≠ Subgroup.zpowers (a * b ^ 2) :=
+  zpowers_ne_of_not_mem (mul_not_mem_right
+    (not_mem_of_zpowers_ne (fst_ne_one hgen) (card_zpowers_eq_p (snd_ne_one hgen))
+      (zpowers_fst_ne_snd hgen))
+    (pow_mem (Subgroup.mem_zpowers b) 2))
 
-theorem gen_a_ab2 : Subgroup.closure ({a, a * b ^ 2} : Set (CpSq p)) = ⊤ := by
-  refine top_of_mem hgen (Subgroup.subset_closure (Set.mem_insert _ _)) ?_
-  have ha : a ∈ Subgroup.closure ({a, a * b ^ 2} : Set (CpSq p)) :=
-    Subgroup.subset_closure (Set.mem_insert _ _)
-  have hab2 : a * b ^ 2 ∈ Subgroup.closure ({a, a * b ^ 2} : Set (CpSq p)) :=
-    Subgroup.subset_closure (Set.mem_insert_of_mem _ rfl)
-  have hb2 : b ^ 2 ∈ Subgroup.closure ({a, a * b ^ 2} : Set (CpSq p)) := by
-    have := mul_mem (inv_mem ha) hab2
-    rwa [inv_mul_cancel_left] at this
-  have : b ∈ Subgroup.zpowers (b ^ 2) := by
-    rw [zpowers_pow (snd_ne_one hgen) (not_dvd_of_ne Nat.prime_two hp2)]
-    exact Subgroup.mem_zpowers b
-  exact Subgroup.zpowers_le.mpr hb2 this
+theorem zpowers_mul_ne_mul_sq : Subgroup.zpowers (a * b) ≠ Subgroup.zpowers (a * b ^ 2) := by
+  refine zpowers_ne_of_not_mem ?_
+  have e : a * b ^ 2 = (a * b) * b := by
+    apply Multiplicative.toAdd.injective
+    simp only [toAdd_mul, toAdd_pow]; abel
+  rw [e]
+  exact mul_not_mem_left (Subgroup.mem_zpowers (a * b))
+    (not_mem_of_zpowers_ne (snd_ne_one hgen) (card_zpowers_eq_p (mul_ne_one hgen))
+      (zpowers_snd_ne_mul hgen))
 
-theorem gen_b_ab2 : Subgroup.closure ({b, a * b ^ 2} : Set (CpSq p)) = ⊤ := by
-  refine top_of_mem hgen ?_ (Subgroup.subset_closure (Set.mem_insert _ _))
-  have hb : b ∈ Subgroup.closure ({b, a * b ^ 2} : Set (CpSq p)) :=
-    Subgroup.subset_closure (Set.mem_insert _ _)
-  have hab2 : a * b ^ 2 ∈ Subgroup.closure ({b, a * b ^ 2} : Set (CpSq p)) :=
-    Subgroup.subset_closure (Set.mem_insert_of_mem _ rfl)
-  have hb2 : b ^ 2 ∈ Subgroup.closure ({b, a * b ^ 2} : Set (CpSq p)) :=
-    pow_mem hb 2
-  have hx : (a * b ^ 2) * (b ^ 2)⁻¹ ∈ Subgroup.closure ({b, a * b ^ 2} : Set (CpSq p)) :=
-    mul_mem hab2 (inv_mem hb2)
-  rwa [mul_inv_cancel_right] at hx
+/-! Each of the four generating pairs of the dimension-4 family now follows from
+`closure_eq_top_of_zpowers_ne`: its two members lie on distinct lines. -/
 
-theorem gen_ab_ab2 : Subgroup.closure ({a * b, a * b ^ 2} : Set (CpSq p)) = ⊤ := by
-  refine top_of_mem hgen ?_ ?_
-  · have hab : a * b ∈ Subgroup.closure ({a * b, a * b ^ 2} : Set (CpSq p)) :=
-      Subgroup.subset_closure (Set.mem_insert _ _)
-    have hab2 : a * b ^ 2 ∈ Subgroup.closure ({a * b, a * b ^ 2} : Set (CpSq p)) :=
-      Subgroup.subset_closure (Set.mem_insert_of_mem _ rfl)
-    have ea : (a * b) ^ 2 * (a * b ^ 2)⁻¹ = a := by
-      apply Multiplicative.toAdd.injective
-      simp only [toAdd_mul, toAdd_inv, toAdd_pow]; abel
-    have hx : (a * b) ^ 2 * (a * b ^ 2)⁻¹ ∈
-        Subgroup.closure ({a * b, a * b ^ 2} : Set (CpSq p)) :=
-      mul_mem (pow_mem hab 2) (inv_mem hab2)
-    rwa [ea] at hx
-  · have hab : a * b ∈ Subgroup.closure ({a * b, a * b ^ 2} : Set (CpSq p)) :=
-      Subgroup.subset_closure (Set.mem_insert _ _)
-    have hab2 : a * b ^ 2 ∈ Subgroup.closure ({a * b, a * b ^ 2} : Set (CpSq p)) :=
-      Subgroup.subset_closure (Set.mem_insert_of_mem _ rfl)
-    have eb : (a * b ^ 2) * (a * b)⁻¹ = b := by
-      apply Multiplicative.toAdd.injective
-      simp only [toAdd_mul, toAdd_inv, toAdd_pow]; abel
-    have hx : (a * b ^ 2) * (a * b)⁻¹ ∈
-        Subgroup.closure ({a * b, a * b ^ 2} : Set (CpSq p)) :=
-      mul_mem hab2 (inv_mem hab)
-    rwa [eb] at hx
+theorem gen_a_b2 : Subgroup.closure ({a, b ^ 2} : Set (CpSq p)) = ⊤ :=
+  closure_eq_top_of_zpowers_ne (fst_ne_one hgen)
+    (pow_ne_one_of_not_dvd (snd_ne_one hgen) (not_dvd_of_ne Nat.prime_two hp2))
+    (by rw [zpowers_pow (snd_ne_one hgen) (not_dvd_of_ne Nat.prime_two hp2)]
+        exact zpowers_fst_ne_snd hgen)
+
+theorem gen_3 : Subgroup.closure ({a⁻¹, (a * b) ^ 2} : Set (CpSq p)) = ⊤ :=
+  closure_eq_top_of_zpowers_ne (inv_ne_one.mpr (fst_ne_one hgen))
+    (pow_ne_one_of_not_dvd (mul_ne_one hgen) (not_dvd_of_ne Nat.prime_two hp2))
+    (by rw [Subgroup.zpowers_inv,
+          zpowers_pow (mul_ne_one hgen) (not_dvd_of_ne Nat.prime_two hp2)]
+        exact zpowers_fst_ne_mul hgen)
+
+theorem gen_4 : Subgroup.closure ({b, a * b} : Set (CpSq p)) = ⊤ :=
+  closure_eq_top_of_zpowers_ne (snd_ne_one hgen) (mul_ne_one hgen) (zpowers_snd_ne_mul hgen)
+
+theorem gen_a_ab2 : Subgroup.closure ({a, a * b ^ 2} : Set (CpSq p)) = ⊤ :=
+  closure_eq_top_of_zpowers_ne (fst_ne_one hgen) (mul_sq_ne_one hgen)
+    (zpowers_fst_ne_mul_sq hgen hp2)
+
+theorem gen_b_ab2 : Subgroup.closure ({b, a * b ^ 2} : Set (CpSq p)) = ⊤ :=
+  closure_eq_top_of_zpowers_ne (snd_ne_one hgen) (mul_sq_ne_one hgen)
+    (zpowers_snd_ne_mul_sq hgen hp2)
+
+theorem gen_ab_ab2 : Subgroup.closure ({a * b, a * b ^ 2} : Set (CpSq p)) = ⊤ :=
+  closure_eq_top_of_zpowers_ne (mul_ne_one hgen) (mul_sq_ne_one hgen)
+    (zpowers_mul_ne_mul_sq hgen hp2)
 
 theorem sigma_d1 : sigmaSet a (b ^ 2) =
     ↑(Subgroup.zpowers a) ∪ ↑(Subgroup.zpowers b) ∪ ↑(Subgroup.zpowers (a * b ^ 2)) := by
@@ -469,9 +460,9 @@ theorem inter4_eq_one {a b : CpSq p} (hgen : Subgroup.closure ({a, b} : Set (CpS
   have d12 := zpowers_fst_ne_snd hgen
   have d13 := zpowers_fst_ne_mul hgen
   have d23 := zpowers_snd_ne_mul hgen
-  have d14 := zpowers_ne_of_top (gen_a_ab2 hgen hp2)
-  have d24 := zpowers_ne_of_top (gen_b_ab2 hgen hp2)
-  have d34 := zpowers_ne_of_top (gen_ab_ab2 hgen hp2)
+  have d14 := zpowers_fst_ne_mul_sq hgen hp2
+  have d24 := zpowers_snd_ne_mul_sq hgen hp2
+  have d34 := zpowers_mul_ne_mul_sq hgen hp2
   simp only [Set.mem_union, SetLike.mem_coe] at h0 h1 h2 h3
   rcases h0 with (hL1 | hL2) | hL3
   · rcases h3 with (hL2 | hL3) | hL4
@@ -508,37 +499,37 @@ theorem primitive4 {a b : CpSq p} (hgen : Subgroup.closure ({a, b} : Set (CpSq p
     · refine ⟨a * b ^ 2, mul_sq_ne_one hgen, fun i hi => ?_⟩
       fin_cases i
       · exact absurd rfl hi
-      · show a * b ^ 2 ∈ sigmaSet a (b ^ 2)
+      · change a * b ^ 2 ∈ sigmaSet a (b ^ 2)
         rw [sigma_d1 hgen hp2]; exact Or.inr (Subgroup.mem_zpowers _)
-      · show a * b ^ 2 ∈ sigmaSet a⁻¹ ((a * b) ^ 2)
+      · change a * b ^ 2 ∈ sigmaSet a⁻¹ ((a * b) ^ 2)
         rw [sigma_d2 hgen hp2]; exact Or.inr (Subgroup.mem_zpowers _)
-      · show a * b ^ 2 ∈ sigmaSet b (a * b)
+      · change a * b ^ 2 ∈ sigmaSet b (a * b)
         rw [sigma_d3 hgen hp2]; exact Or.inr (Subgroup.mem_zpowers _)
     · refine ⟨a * b, mul_ne_one hgen, fun i hi => ?_⟩
       fin_cases i
-      · show a * b ∈ sigmaSet a b
+      · change a * b ∈ sigmaSet a b
         rw [sigmaSet_of_comm]; exact Or.inr (Subgroup.mem_zpowers _)
       · exact absurd rfl hi
-      · show a * b ∈ sigmaSet a⁻¹ ((a * b) ^ 2)
+      · change a * b ∈ sigmaSet a⁻¹ ((a * b) ^ 2)
         rw [sigma_d2 hgen hp2]; exact Or.inl (Or.inr (Subgroup.mem_zpowers _))
-      · show a * b ∈ sigmaSet b (a * b)
+      · change a * b ∈ sigmaSet b (a * b)
         rw [sigma_d3 hgen hp2]; exact Or.inl (Or.inr (Subgroup.mem_zpowers _))
     · refine ⟨b, snd_ne_one hgen, fun i hi => ?_⟩
       fin_cases i
-      · show b ∈ sigmaSet a b
+      · change b ∈ sigmaSet a b
         rw [sigmaSet_of_comm]; exact Or.inl (Or.inr (Subgroup.mem_zpowers _))
-      · show b ∈ sigmaSet a (b ^ 2)
+      · change b ∈ sigmaSet a (b ^ 2)
         rw [sigma_d1 hgen hp2]; exact Or.inl (Or.inr (Subgroup.mem_zpowers _))
       · exact absurd rfl hi
-      · show b ∈ sigmaSet b (a * b)
+      · change b ∈ sigmaSet b (a * b)
         rw [sigma_d3 hgen hp2]; exact Or.inl (Or.inl (Subgroup.mem_zpowers _))
     · refine ⟨a, fst_ne_one hgen, fun i hi => ?_⟩
       fin_cases i
-      · show a ∈ sigmaSet a b
+      · change a ∈ sigmaSet a b
         rw [sigmaSet_of_comm]; exact Or.inl (Or.inl (Subgroup.mem_zpowers _))
-      · show a ∈ sigmaSet a (b ^ 2)
+      · change a ∈ sigmaSet a (b ^ 2)
         rw [sigma_d1 hgen hp2]; exact Or.inl (Or.inl (Subgroup.mem_zpowers _))
-      · show a ∈ sigmaSet a⁻¹ ((a * b) ^ 2)
+      · change a ∈ sigmaSet a⁻¹ ((a * b) ^ 2)
         rw [sigma_d2 hgen hp2]; exact Or.inl (Or.inl (Subgroup.mem_zpowers _))
       · exact absurd rfl hi
   intro hcontra
@@ -594,14 +585,6 @@ variable {a b : CpSq p} (hgen : Subgroup.closure ({a, b} : Set (CpSq p)) = ⊤)
 
 include hgen
 
-theorem elt_eq_5 : (a * b)⁻¹ * (a * b ^ 2) ^ 2 = a * b ^ 3 := by
-  apply Multiplicative.toAdd.injective
-  simp only [toAdd_mul, toAdd_inv, toAdd_pow]; abel
-
-theorem elt_eq_6 : (a * b)⁻¹ * (a * b ^ 2) = b := by
-  apply Multiplicative.toAdd.injective
-  simp only [toAdd_mul, toAdd_inv, toAdd_pow]; abel
-
 theorem mul_cube_ne_one : a * b ^ 3 ≠ 1 := by
   intro h
   refine not_mem_of_zpowers_ne (fst_ne_one hgen) (card_zpowers_eq_p (snd_ne_one hgen))
@@ -611,59 +594,47 @@ theorem mul_cube_ne_one : a * b ^ 3 ≠ 1 := by
 
 include hp2
 
-theorem gen3_pair2 : Subgroup.closure ({(a * b)⁻¹, (a * b ^ 2) ^ 2} : Set (CpSq p)) = ⊤ := by
-  have hab_inv : (a * b)⁻¹ ∈ Subgroup.closure ({(a * b)⁻¹, (a * b ^ 2) ^ 2} : Set (CpSq p)) :=
-    Subgroup.subset_closure (Set.mem_insert _ _)
-  have hab2sq : (a * b ^ 2) ^ 2 ∈
-      Subgroup.closure ({(a * b)⁻¹, (a * b ^ 2) ^ 2} : Set (CpSq p)) :=
-    Subgroup.subset_closure (Set.mem_insert_of_mem _ rfl)
-  have hab : a * b ∈ Subgroup.closure ({(a * b)⁻¹, (a * b ^ 2) ^ 2} : Set (CpSq p)) := by
-    simpa using inv_mem hab_inv
-  have hab2 : a * b ^ 2 ∈ Subgroup.closure ({(a * b)⁻¹, (a * b ^ 2) ^ 2} : Set (CpSq p)) := by
-    have h := Subgroup.zpowers_le.mpr hab2sq
-    rw [zpowers_pow (mul_sq_ne_one hgen) (not_dvd_of_ne Nat.prime_two hp2)] at h
-    exact h (Subgroup.mem_zpowers _)
-  have hb : b ∈ Subgroup.closure ({(a * b)⁻¹, (a * b ^ 2) ^ 2} : Set (CpSq p)) := by
-    have hx := mul_mem (inv_mem hab) hab2
-    rwa [elt_eq_6 hgen] at hx
-  refine top_of_mem hgen ?_ hb
-  have hx := mul_mem hab (inv_mem hb)
-  rwa [mul_inv_cancel_right] at hx
+theorem gen3_pair2 : Subgroup.closure ({(a * b)⁻¹, (a * b ^ 2) ^ 2} : Set (CpSq p)) = ⊤ :=
+  closure_eq_top_of_zpowers_ne (inv_ne_one.mpr (mul_ne_one hgen))
+    (pow_ne_one_of_not_dvd (mul_sq_ne_one hgen) (not_dvd_of_ne Nat.prime_two hp2))
+    (by rw [Subgroup.zpowers_inv,
+          zpowers_pow (mul_sq_ne_one hgen) (not_dvd_of_ne Nat.prime_two hp2)]
+        exact zpowers_mul_ne_mul_sq hgen hp2)
 
 theorem sigma_e2 : sigmaSet (a * b)⁻¹ ((a * b ^ 2) ^ 2) =
     ↑(Subgroup.zpowers (a * b)) ∪ ↑(Subgroup.zpowers (a * b ^ 2)) ∪
       ↑(Subgroup.zpowers (a * b ^ 3)) := by
+  have e : (a * b)⁻¹ * (a * b ^ 2) ^ 2 = a * b ^ 3 := by
+    apply Multiplicative.toAdd.injective
+    simp only [toAdd_mul, toAdd_inv, toAdd_pow]; abel
   rw [sigmaSet_of_comm, Subgroup.zpowers_inv,
-    zpowers_pow (mul_sq_ne_one hgen) (not_dvd_of_ne Nat.prime_two hp2), elt_eq_5 hgen]
+    zpowers_pow (mul_sq_ne_one hgen) (not_dvd_of_ne Nat.prime_two hp2), e]
 
 include hp3
 
-theorem gen_a_ab3 : Subgroup.closure ({a, a * b ^ 3} : Set (CpSq p)) = ⊤ := by
-  refine top_of_mem hgen (Subgroup.subset_closure (Set.mem_insert _ _)) ?_
-  have ha : a ∈ Subgroup.closure ({a, a * b ^ 3} : Set (CpSq p)) :=
-    Subgroup.subset_closure (Set.mem_insert _ _)
-  have hab3 : a * b ^ 3 ∈ Subgroup.closure ({a, a * b ^ 3} : Set (CpSq p)) :=
-    Subgroup.subset_closure (Set.mem_insert_of_mem _ rfl)
-  have hb3 : b ^ 3 ∈ Subgroup.closure ({a, a * b ^ 3} : Set (CpSq p)) := by
-    have := mul_mem (inv_mem ha) hab3
-    rwa [inv_mul_cancel_left] at this
-  have : b ∈ Subgroup.zpowers (b ^ 3) := by
-    rw [zpowers_pow (snd_ne_one hgen) (not_dvd_of_ne Nat.prime_three hp3)]
-    exact Subgroup.mem_zpowers b
-  exact Subgroup.zpowers_le.mpr hb3 this
+/-! The two lines `⟨a⟩, ⟨b⟩` are distinct from `⟨a*b³⟩` (the former needs `p ≠ 3`). -/
 
-theorem gen_b_ab3 : Subgroup.closure ({b, a * b ^ 3} : Set (CpSq p)) = ⊤ := by
-  refine top_of_mem hgen ?_ (Subgroup.subset_closure (Set.mem_insert _ _))
-  have hb : b ∈ Subgroup.closure ({b, a * b ^ 3} : Set (CpSq p)) :=
-    Subgroup.subset_closure (Set.mem_insert _ _)
-  have hab3 : a * b ^ 3 ∈ Subgroup.closure ({b, a * b ^ 3} : Set (CpSq p)) :=
-    Subgroup.subset_closure (Set.mem_insert_of_mem _ rfl)
-  have hb3 : b ^ 3 ∈ Subgroup.closure ({b, a * b ^ 3} : Set (CpSq p)) := pow_mem hb 3
-  have hx : (a * b ^ 3) * (b ^ 3)⁻¹ ∈ Subgroup.closure ({b, a * b ^ 3} : Set (CpSq p)) :=
-    mul_mem hab3 (inv_mem hb3)
-  rwa [mul_inv_cancel_right] at hx
+theorem zpowers_fst_ne_mul_cube : Subgroup.zpowers a ≠ Subgroup.zpowers (a * b ^ 3) :=
+  zpowers_ne_of_not_mem (mul_not_mem_left (Subgroup.mem_zpowers a)
+    (pow_not_mem_of_zpowers_ne (fst_ne_one hgen) (snd_ne_one hgen)
+      (not_dvd_of_ne Nat.prime_three hp3) (zpowers_fst_ne_snd hgen).symm))
+
+theorem zpowers_snd_ne_mul_cube : Subgroup.zpowers b ≠ Subgroup.zpowers (a * b ^ 3) :=
+  zpowers_ne_of_not_mem (mul_not_mem_right
+    (not_mem_of_zpowers_ne (fst_ne_one hgen) (card_zpowers_eq_p (snd_ne_one hgen))
+      (zpowers_fst_ne_snd hgen))
+    (pow_mem (Subgroup.mem_zpowers b) 3))
 
 end Dim3
+
+/-- **Consistency Remark.** When `p = 3`, the line `⟨a*b³⟩` coincides with `⟨a⟩` (since
+`b³ = b^p = 1`). This is exactly why the dimension-3 construction requires `p ≠ 3`: at `p = 3`
+the Σ-set `Σ((a*b)⁻¹, (a*b²)²)` no longer meets `Σ(a, b)` only in the identity, consistent with
+`min(BSpec(C₃²)) = 4`. -/
+theorem zpowers_mul_cube_eq_of_three (hp3 : p = 3) {a b : CpSq p} :
+    Subgroup.zpowers (a * b ^ 3) = Subgroup.zpowers a := by
+  have hb : b ^ 3 = 1 := by rw [← hp3]; exact pow_p_eq_one b
+  rw [hb, mul_one]
 
 /-- The three generating pairs of the dimension-3 Beauville structure of `C_p²` (`p ≥ 5`). -/
 def pairs3 {a b : CpSq p} (hgen : Subgroup.closure ({a, b} : Set (CpSq p)) = ⊤) (hp2 : p ≠ 2)
@@ -693,11 +664,11 @@ theorem inter3_eq_one {a b : CpSq p} (hgen : Subgroup.closure ({a, b} : Set (CpS
   have cab3 := card_zpowers_eq_p (mul_cube_ne_one hgen)
   have d13 := zpowers_fst_ne_mul hgen
   have d23 := zpowers_snd_ne_mul hgen
-  have d14 := zpowers_ne_of_top (gen_a_ab2 hgen hp2)
-  have d24 := zpowers_ne_of_top (gen_b_ab2 hgen hp2)
-  have d34 := zpowers_ne_of_top (gen_ab_ab2 hgen hp2)
-  have d15 := zpowers_ne_of_top (gen_a_ab3 hgen hp2 hp3)
-  have d25 := zpowers_ne_of_top (gen_b_ab3 hgen hp2 hp3)
+  have d14 := zpowers_fst_ne_mul_sq hgen hp2
+  have d24 := zpowers_snd_ne_mul_sq hgen hp2
+  have d34 := zpowers_mul_ne_mul_sq hgen hp2
+  have d15 := zpowers_fst_ne_mul_cube hgen hp2 hp3
+  have d25 := zpowers_snd_ne_mul_cube hgen hp2 hp3
   simp only [Set.mem_union, SetLike.mem_coe] at h0 h1 h2
   rcases h0 with (hL1 | hL2) | hL3
   · rcases h2 with (hL3 | hL4) | hL5
@@ -734,22 +705,22 @@ theorem primitive3 {a b : CpSq p} (hgen : Subgroup.closure ({a, b} : Set (CpSq p
     · refine ⟨a * b ^ 2, mul_sq_ne_one hgen, fun i hi => ?_⟩
       fin_cases i
       · exact absurd rfl hi
-      · show a * b ^ 2 ∈ sigmaSet a (b ^ 2)
+      · change a * b ^ 2 ∈ sigmaSet a (b ^ 2)
         rw [sigma_d1 hgen hp2]; exact Or.inr (Subgroup.mem_zpowers _)
-      · show a * b ^ 2 ∈ sigmaSet (a * b)⁻¹ ((a * b ^ 2) ^ 2)
+      · change a * b ^ 2 ∈ sigmaSet (a * b)⁻¹ ((a * b ^ 2) ^ 2)
         rw [sigma_e2 hgen hp2]; exact Or.inl (Or.inr (Subgroup.mem_zpowers _))
     · refine ⟨a * b, mul_ne_one hgen, fun i hi => ?_⟩
       fin_cases i
-      · show a * b ∈ sigmaSet a b
+      · change a * b ∈ sigmaSet a b
         rw [sigmaSet_of_comm]; exact Or.inr (Subgroup.mem_zpowers _)
       · exact absurd rfl hi
-      · show a * b ∈ sigmaSet (a * b)⁻¹ ((a * b ^ 2) ^ 2)
+      · change a * b ∈ sigmaSet (a * b)⁻¹ ((a * b ^ 2) ^ 2)
         rw [sigma_e2 hgen hp2]; exact Or.inl (Or.inl (Subgroup.mem_zpowers _))
     · refine ⟨a, fst_ne_one hgen, fun i hi => ?_⟩
       fin_cases i
-      · show a ∈ sigmaSet a b
+      · change a ∈ sigmaSet a b
         rw [sigmaSet_of_comm]; exact Or.inl (Or.inl (Subgroup.mem_zpowers _))
-      · show a ∈ sigmaSet a (b ^ 2)
+      · change a ∈ sigmaSet a (b ^ 2)
         rw [sigma_d1 hgen hp2]; exact Or.inl (Or.inl (Subgroup.mem_zpowers _))
       · exact absurd rfl hi
   intro hcontra
