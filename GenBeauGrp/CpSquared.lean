@@ -374,15 +374,6 @@ theorem mul_sq_ne_one : a * b ^ 2 ≠ 1 := by
 
 include hp2
 
-/-! The three "extra" lines `⟨a⟩, ⟨b⟩, ⟨a*b⟩` are each distinct from `⟨a*b²⟩`. -/
-
-theorem zpowers_fst_ne_mul_sq : Subgroup.zpowers a ≠ Subgroup.zpowers (a * b ^ 2) :=
-  zpowers_fst_ne_mul_pow hgen (not_dvd_of_ne Nat.prime_two hp2)
-
-omit hp2 in
-theorem zpowers_snd_ne_mul_sq : Subgroup.zpowers b ≠ Subgroup.zpowers (a * b ^ 2) :=
-  zpowers_snd_ne_mul_pow hgen 2
-
 omit hp2 in
 theorem zpowers_mul_ne_mul_sq : Subgroup.zpowers (a * b) ≠ Subgroup.zpowers (a * b ^ 2) := by
   refine zpowers_ne_of_not_mem ?_
@@ -458,8 +449,8 @@ theorem inter4_eq_one {a b : CpSq p} (hgen : Subgroup.closure ({a, b} : Set (CpS
   have d12 := zpowers_fst_ne_snd hgen
   have d13 := zpowers_fst_ne_mul hgen
   have d23 := zpowers_snd_ne_mul hgen
-  have d14 := zpowers_fst_ne_mul_sq hgen hp2
-  have d24 := zpowers_snd_ne_mul_sq hgen
+  have d14 := zpowers_fst_ne_mul_pow hgen (not_dvd_of_ne Nat.prime_two hp2)
+  have d24 := zpowers_snd_ne_mul_pow hgen 2
   have d34 := zpowers_mul_ne_mul_sq hgen
   simp only [Set.mem_union, SetLike.mem_coe] at h0 h1 h2 h3
   rcases h0 with (hL1 | hL2) | hL3
@@ -601,18 +592,6 @@ theorem sigma_e2 : sigmaSet (a * b)⁻¹ ((a * b ^ 2) ^ 2) =
   rw [sigmaSet_of_comm, Subgroup.zpowers_inv,
     zpowers_pow (mul_sq_ne_one hgen) (not_dvd_of_ne Nat.prime_two hp2), e]
 
-include hp3
-
-/-! The two lines `⟨a⟩, ⟨b⟩` are distinct from `⟨a*b³⟩` (the former needs `p ≠ 3`). -/
-
-omit hp2 in
-theorem zpowers_fst_ne_mul_cube : Subgroup.zpowers a ≠ Subgroup.zpowers (a * b ^ 3) :=
-  zpowers_fst_ne_mul_pow hgen (not_dvd_of_ne Nat.prime_three hp3)
-
-omit hp2 hp3 in
-theorem zpowers_snd_ne_mul_cube : Subgroup.zpowers b ≠ Subgroup.zpowers (a * b ^ 3) :=
-  zpowers_snd_ne_mul_pow hgen 3
-
 end Dim3
 
 omit [Fact p.Prime] in
@@ -661,11 +640,11 @@ theorem inter3_eq_one {a b : CpSq p} (hgen : Subgroup.closure ({a, b} : Set (CpS
   have cab3 := card_zpowers_eq_p (mul_cube_ne_one hgen)
   have d13 := zpowers_fst_ne_mul hgen
   have d23 := zpowers_snd_ne_mul hgen
-  have d14 := zpowers_fst_ne_mul_sq hgen hp2
-  have d24 := zpowers_snd_ne_mul_sq hgen
+  have d14 := zpowers_fst_ne_mul_pow hgen (not_dvd_of_ne Nat.prime_two hp2)
+  have d24 := zpowers_snd_ne_mul_pow hgen 2
   have d34 := zpowers_mul_ne_mul_sq hgen
-  have d15 := zpowers_fst_ne_mul_cube hgen hp3
-  have d25 := zpowers_snd_ne_mul_cube hgen
+  have d15 := zpowers_fst_ne_mul_pow hgen (not_dvd_of_ne Nat.prime_three hp3)
+  have d25 := zpowers_snd_ne_mul_pow hgen 3
   simp only [Set.mem_union, SetLike.mem_coe] at h0 h1 h2
   rcases h0 with (hL1 | hL2) | hL3
   · rcases h2 with (hL3 | hL4) | hL5
