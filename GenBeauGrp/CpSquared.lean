@@ -244,9 +244,8 @@ theorem dimension_le_four (B : GeneralisedBeauvilleStructure (CpSq p))
 
 /-! ### Construction helpers for the lower bound -/
 
-omit [Fact p.Prime] in
 /-- A linear functional separating `x` from `y` certifies `y ∉ ⟨x⟩`. -/
-theorem not_mem_zpowers_of_hom {x y : CpSq p} (ℓ : (ZMod p × ZMod p) →+ ZMod p)
+theorem not_mem_zpowers_of_hom {n : ℕ} {x y : CpSq n} (ℓ : (ZMod n × ZMod n) →+ ZMod n)
     (hx : ℓ (Multiplicative.toAdd x) = 0) (hy : ℓ (Multiplicative.toAdd y) ≠ 0) :
     y ∉ Subgroup.zpowers x := by
   intro hmem
@@ -295,9 +294,8 @@ theorem not_mem_of_zpowers_ne {x : CpSq p} (hx : x ≠ 1) {H : Subgroup (CpSq p)
     (hcard : Nat.card H = p) (hne : Subgroup.zpowers x ≠ H) : x ∉ H :=
   fun hmem => hne (zpowers_eq_of_mem hx hcard hmem)
 
-omit [Fact p.Prime] in
 /-- `⟨x⟩ ≠ ⟨y⟩` whenever `y` lies off the line `⟨x⟩`. -/
-theorem zpowers_ne_of_not_mem {x y : CpSq p} (hxy : y ∉ Subgroup.zpowers x) :
+theorem zpowers_ne_of_not_mem {n : ℕ} {x y : CpSq n} (hxy : y ∉ Subgroup.zpowers x) :
     Subgroup.zpowers x ≠ Subgroup.zpowers y :=
   fun h => hxy (h.symm ▸ Subgroup.mem_zpowers y)
 
@@ -307,15 +305,13 @@ theorem pow_not_mem_of_zpowers_ne {x v : CpSq p} (hx : x ≠ 1) (hv : v ≠ 1) {
   not_mem_of_zpowers_ne (pow_ne_one_of_not_dvd hv hn) (card_zpowers_eq_p hx)
     (by rwa [zpowers_pow hv hn])
 
-omit [Fact p.Prime] in
 /-- If `c ∈ ⟨u⟩` but `d ∉ ⟨u⟩`, then `c * d ∉ ⟨u⟩`. -/
-theorem mul_not_mem_left {u c d : CpSq p} (hc : c ∈ Subgroup.zpowers u)
+theorem mul_not_mem_left {n : ℕ} {u c d : CpSq n} (hc : c ∈ Subgroup.zpowers u)
     (hd : d ∉ Subgroup.zpowers u) : c * d ∉ Subgroup.zpowers u :=
   fun h => hd ((Subgroup.mul_mem_cancel_left _ hc).mp h)
 
-omit [Fact p.Prime] in
 /-- If `c ∉ ⟨u⟩` but `d ∈ ⟨u⟩`, then `c * d ∉ ⟨u⟩`. -/
-theorem mul_not_mem_right {u c d : CpSq p} (hc : c ∉ Subgroup.zpowers u)
+theorem mul_not_mem_right {n : ℕ} {u c d : CpSq n} (hc : c ∉ Subgroup.zpowers u)
     (hd : d ∈ Subgroup.zpowers u) : c * d ∉ Subgroup.zpowers u :=
   fun h => hc ((Subgroup.mul_mem_cancel_right _ hd).mp h)
 
@@ -352,6 +348,74 @@ theorem zpowers_snd_ne_mul_pow {a b : CpSq p}
       (zpowers_fst_ne_snd hgen))
     (pow_mem (Subgroup.mem_zpowers b) n))
 
+/-- A non-identity multiple `x * yⁱ` (any `i`) of a generating pair is never the identity. -/
+theorem mul_pow_ne_one {x y : CpSq p} (hgen : Subgroup.closure ({x, y} : Set (CpSq p)) = ⊤)
+    (n : ℕ) : x * y ^ n ≠ 1 := by
+  intro h
+  refine not_mem_of_zpowers_ne (fst_ne_one hgen) (card_zpowers_eq_p (snd_ne_one hgen))
+    (zpowers_fst_ne_snd hgen) ?_
+  rw [eq_inv_of_mul_eq_one_left h]
+  exact inv_mem (pow_mem (Subgroup.mem_zpowers y) n)
+
+/-- Distinct small powers of a non-identity element of `C_p²` are distinct, provided their
+exponents differ by less than `p`. -/
+theorem pow_ne_pow_of_lt {x : CpSq p} (hx : x ≠ 1) {i j : ℕ} (hij : i < j) (hd : j - i < p) :
+    x ^ i ≠ x ^ j := by
+  intro h
+  have hsplit : x ^ j = x ^ i * x ^ (j - i) := by
+    rw [← pow_add]; congr 1; omega
+  rw [hsplit] at h
+  have h1 : x ^ (j - i) = 1 := mul_eq_left.mp h.symm
+  have hdvd := orderOf_dvd_of_pow_eq_one h1
+  rw [orderOf_eq_p hx] at hdvd
+  have hpos : 0 < j - i := by omega
+  exact absurd (Nat.le_of_dvd hpos hdvd) (by omega)
+
+/-- For `p ≠ 2`, `p` does not divide `4`. -/
+theorem not_dvd_four (hp2 : p ≠ 2) : ¬ p ∣ 4 := by
+  intro hd
+  have hp : p.Prime := Fact.out
+  have h4 : (4 : ℕ) = 2 * 2 := by norm_num
+  rw [h4] at hd
+  rcases hp.dvd_mul.mp hd with h | h <;>
+    exact hp2 ((Nat.prime_dvd_prime_iff_eq hp Nat.prime_two).mp h)
+
+/-- **Distinct lines through powers of `y`.** If `yⁱ ≠ yʲ`, then `x * yⁱ` and `x * yʲ` generate
+different cyclic subgroups. -/
+theorem zpowers_mul_pow_ne_mul_pow {x y : CpSq p}
+    (hgen : Subgroup.closure ({x, y} : Set (CpSq p)) = ⊤) {i j : ℕ} (hij : y ^ i ≠ y ^ j) :
+    Subgroup.zpowers (x * y ^ i) ≠ Subgroup.zpowers (x * y ^ j) := by
+  intro heq
+  set H := Subgroup.zpowers (x * y ^ i) with hHdef
+  have hcardH : Nat.card H = p := card_zpowers_eq_p (mul_pow_ne_one hgen i)
+  have h1 : x * y ^ i ∈ H := Subgroup.mem_zpowers _
+  have h2 : x * y ^ j ∈ H := heq ▸ Subgroup.mem_zpowers _
+  set c := (x * y ^ i)⁻¹ * (x * y ^ j) with hcdef
+  have hcH : c ∈ H := mul_mem (inv_mem h1) h2
+  have hceq : c = (y ^ i)⁻¹ * y ^ j := by
+    rw [hcdef]
+    apply Multiplicative.toAdd.injective
+    simp only [toAdd_mul, toAdd_inv]; abel
+  have hcy : c ∈ Subgroup.zpowers y := by
+    rw [hceq]
+    exact mul_mem (inv_mem (pow_mem (Subgroup.mem_zpowers y) i))
+      (pow_mem (Subgroup.mem_zpowers y) j)
+  have hc1 : c ≠ 1 := by
+    rw [hceq]
+    intro hc0
+    exact hij (inv_mul_eq_one.mp hc0)
+  have hHzy : H = Subgroup.zpowers y := by
+    rw [← zpowers_eq_of_mem hc1 hcardH hcH,
+      zpowers_eq_of_mem hc1 (card_zpowers_eq_p (snd_ne_one hgen)) hcy]
+  have h1' : x * y ^ i ∈ Subgroup.zpowers y := hHzy ▸ h1
+  have hxy : x ∈ Subgroup.zpowers y := by
+    have e : x = (x * y ^ i) * (y ^ i)⁻¹ := by
+      apply Multiplicative.toAdd.injective; simp only [toAdd_mul, toAdd_inv]; abel
+    rw [e]
+    exact mul_mem h1' (inv_mem (pow_mem (Subgroup.mem_zpowers y) i))
+  exact not_mem_of_zpowers_ne (fst_ne_one hgen) (card_zpowers_eq_p (snd_ne_one hgen))
+    (zpowers_fst_ne_snd hgen) hxy
+
 /-! ### The dimension-four construction
 
 Throughout, `(a, b)` is a generating pair of `C_p²` and `p ≠ 2`. The four constituent lines are
@@ -364,13 +428,6 @@ variable {a b : CpSq p} (hgen : Subgroup.closure ({a, b} : Set (CpSq p)) = ⊤) 
 include hgen
 
 
-
-theorem mul_sq_ne_one : a * b ^ 2 ≠ 1 := by
-  intro h
-  refine not_mem_of_zpowers_ne (fst_ne_one hgen) (card_zpowers_eq_p (snd_ne_one hgen))
-    (zpowers_fst_ne_snd hgen) ?_
-  rw [eq_inv_of_mul_eq_one_left h]
-  exact inv_mem (pow_mem (Subgroup.mem_zpowers b) 2)
 
 include hp2
 
@@ -398,16 +455,15 @@ theorem sigma_d2 : sigmaSet a⁻¹ ((a * b) ^ 2) =
     simp only [toAdd_mul, toAdd_inv, toAdd_pow]; abel
   rw [this]
 
-omit [Fact p.Prime] hgen hp2 in
-theorem sigma_d3 : sigmaSet b (a * b) =
+end Dim4
+
+theorem sigma_d3 {n : ℕ} {a b : CpSq n} : sigmaSet b (a * b) =
     ↑(Subgroup.zpowers b) ∪ ↑(Subgroup.zpowers (a * b)) ∪ ↑(Subgroup.zpowers (a * b ^ 2)) := by
   rw [sigmaSet_of_comm]
   have : b * (a * b) = a * b ^ 2 := by
     apply Multiplicative.toAdd.injective
     simp only [toAdd_mul, toAdd_pow]; abel
   rw [this]
-
-end Dim4
 
 /-- The four generating pairs of the dimension-4 Beauville structure of `C_p²`. -/
 def pairs4 {a b : CpSq p} (hgen : Subgroup.closure ({a, b} : Set (CpSq p)) = ⊤) (hp2 : p ≠ 2) :
@@ -445,7 +501,7 @@ theorem inter4_eq_one {a b : CpSq p} (hgen : Subgroup.closure ({a, b} : Set (CpS
   have ca := card_zpowers_eq_p (fst_ne_one hgen)
   have cb := card_zpowers_eq_p (snd_ne_one hgen)
   have cab := card_zpowers_eq_p (mul_ne_one hgen)
-  have cab2 := card_zpowers_eq_p (mul_sq_ne_one hgen)
+  have cab2 := card_zpowers_eq_p (mul_pow_ne_one hgen 2)
   have d12 := zpowers_fst_ne_snd hgen
   have d13 := zpowers_fst_ne_mul hgen
   have d23 := zpowers_snd_ne_mul hgen
@@ -485,7 +541,7 @@ theorem primitive4 {a b : CpSq p} (hgen : Subgroup.closure ({a, b} : Set (CpSq p
   obtain ⟨w, hw1, hwi⟩ : ∃ w : CpSq p, w ≠ 1 ∧
       ∀ i : Fin 4, i ≠ j → w ∈ sigmaSet (pairs4 hgen hp2 i).x (pairs4 hgen hp2 i).y := by
     fin_cases j
-    · refine ⟨a * b ^ 2, mul_sq_ne_one hgen, fun i hi => ?_⟩
+    · refine ⟨a * b ^ 2, mul_pow_ne_one hgen 2, fun i hi => ?_⟩
       fin_cases i
       · exact absurd rfl hi
       · change a * b ^ 2 ∈ sigmaSet a (b ^ 2)
@@ -554,13 +610,286 @@ theorem isGreatest_BSpec (hp2 : p ≠ 2) : IsGreatest (BeauvilleSpectrum (CpSq p
     rintro d ⟨B, hBprim, rfl⟩
     exact dimension_le_four B hBprim⟩
 
+/-! ### The minimum of `BSpec(C_p²)` -/
+
+/-- **Lower floor.** Every `GeneralisedBeauvilleStructure (CpSq p)` has dimension at least `2`:
+dimension `0` would force `⋂ᵢ Σᵢ = univ`, impossible since `C_p²` is nontrivial; dimension `1`
+would force a single Σ-set to equal `{1}`, impossible since it contains its non-identity
+generator. -/
+theorem two_le_dimension (B : GeneralisedBeauvilleStructure (CpSq p)) : 2 ≤ B.dimension := by
+  rw [GeneralisedBeauvilleStructure.dimension]
+  by_contra hlt
+  have hcase : Fintype.card B.ι = 0 ∨ Fintype.card B.ι = 1 := by omega
+  rcases hcase with hc | hc
+  · have hempty : IsEmpty B.ι := Fintype.card_eq_zero_iff.mp hc
+    have huniv : (⋂ i, sigmaSet (B.pairs i).x (B.pairs i).y) = Set.univ := Set.iInter_of_empty _
+    rw [B.inter_sigmaSet_eq_one] at huniv
+    have hmem : Multiplicative.ofAdd ((1 : ZMod p), (0 : ZMod p)) ∈ ({1} : Set (CpSq p)) := by
+      rw [huniv]; exact Set.mem_univ _
+    exact fst_ne_one basis_gen (Set.mem_singleton_iff.mp hmem)
+  · obtain ⟨i₀, hi₀⟩ := Fintype.card_eq_one_iff.mp hc
+    have hx_mem : (B.pairs i₀).x ∈ ⋂ i, sigmaSet (B.pairs i).x (B.pairs i).y := by
+      rw [Set.mem_iInter]
+      intro i
+      rw [hi₀ i]
+      exact Group.subset_conjugatesOfSet (Or.inl (Or.inl (Subgroup.mem_zpowers _)))
+    rw [B.inter_sigmaSet_eq_one, Set.mem_singleton_iff] at hx_mem
+    exact fst_ne_one (B.pairs i₀).generates hx_mem
+
+/-- **Line-set.** An explicit `Finset` enumerating the `p + 1` order-`p` subgroups ("lines") of
+`C_p²`: the order-`p` subgroups partition the `p² - 1` non-identity elements into blocks of size
+`p - 1` (the non-identity elements of each line). -/
+theorem exists_lines_finset : ∃ L : Finset (Subgroup (CpSq p)), L.card = p + 1 ∧
+    ∀ H : Subgroup (CpSq p), H ∈ L ↔ Nat.card H = p := by
+  classical
+  set S : Finset (CpSq p) := Finset.univ.erase 1 with hS
+  have hScard : S.card = p ^ 2 - 1 := by
+    rw [hS, Finset.card_erase_of_mem (Finset.mem_univ 1), Finset.card_univ,
+      ← Nat.card_eq_fintype_card, card_eq]
+  set f : CpSq p → Subgroup (CpSq p) := fun g => Subgroup.zpowers g with hf
+  have hfiber : ∀ H ∈ S.image f, (S.filter (fun g => f g = H)).card = p - 1 := by
+    intro H hH
+    obtain ⟨g₀, hg₀S, hg₀eq⟩ := Finset.mem_image.mp hH
+    have hg₀1 : g₀ ≠ 1 := (Finset.mem_erase.mp hg₀S).1
+    have hHcard : Nat.card H = p := by rw [← hg₀eq]; exact card_zpowers_eq_p hg₀1
+    have hset : S.filter (fun g => f g = H) = (Finset.univ.filter (· ∈ H)).erase 1 := by
+      ext g
+      simp only [Finset.mem_filter, Finset.mem_univ, true_and, and_true, hS, Finset.mem_erase, hf]
+      constructor
+      · rintro ⟨hg1, hzg⟩
+        exact ⟨hg1, by rw [← hzg]; exact Subgroup.mem_zpowers g⟩
+      · rintro ⟨hg1, hgH⟩
+        exact ⟨hg1, zpowers_eq_of_mem hg1 hHcard hgH⟩
+    rw [hset, Finset.card_erase_of_mem (Finset.mem_filter.mpr ⟨Finset.mem_univ 1, one_mem H⟩)]
+    have hcardSub : (Finset.univ.filter (· ∈ H)).card = Nat.card H := by
+      rw [← Fintype.card_subtype (· ∈ H), ← Nat.card_eq_fintype_card]
+    rw [hcardSub, hHcard]
+  have hsum : S.card = ∑ H ∈ S.image f, (S.filter (fun g => f g = H)).card :=
+    Finset.card_eq_sum_card_image f S
+  rw [Finset.sum_congr rfl hfiber, Finset.sum_const, smul_eq_mul, hScard] at hsum
+  have hp : p.Prime := Fact.out
+  have e0 : p ^ 2 = (p + 1) * (p - 1) + 1 := by
+    rcases Nat.exists_eq_add_of_le hp.two_le with ⟨k, hk⟩
+    subst hk
+    have hsub : 2 + k - 1 = k + 1 := by omega
+    rw [hsub]; ring
+  have e1 : p ^ 2 - 1 = (p + 1) * (p - 1) := by omega
+  have key : (S.image f).card * (p - 1) = (p + 1) * (p - 1) := hsum.symm.trans e1
+  have hp1pos : 0 < p - 1 := by have := hp.two_le; omega
+  have hcard : (S.image f).card = p + 1 := Nat.eq_of_mul_eq_mul_right hp1pos key
+  have hcoe : (↑(S.image f) : Set (Subgroup (CpSq p)))
+      = {H : Subgroup (CpSq p) | Nat.card H = p} := by
+    ext H
+    simp only [Finset.coe_image, Set.mem_image, Finset.mem_coe, Set.mem_setOf_eq]
+    constructor
+    · rintro ⟨g, hgS, rfl⟩
+      exact card_zpowers_eq_p (Finset.mem_erase.mp hgS).1
+    · intro hHcard
+      have hne_bot : H ≠ ⊥ := by
+        rw [← Subgroup.one_lt_card_iff_ne_bot, hHcard]; exact hp.one_lt
+      obtain ⟨g, hgH, hg1⟩ := (Subgroup.nontrivial_iff_exists_ne_one H).mp
+        ((Subgroup.nontrivial_iff_ne_bot H).mpr hne_bot)
+      exact ⟨g, Finset.mem_erase.mpr ⟨hg1, Finset.mem_univ g⟩, zpowers_eq_of_mem hg1 hHcard hgH⟩
+  exact ⟨S.image f, hcard, fun H => by rw [← Finset.mem_coe, hcoe, Set.mem_setOf_eq]⟩
+
+/-- **Line count.** `C_p²` has exactly `p + 1` order-`p` subgroups ("lines"). -/
+theorem ncard_lines_eq : {H : Subgroup (CpSq p) | Nat.card H = p}.ncard = p + 1 := by
+  obtain ⟨L, hLcard, hLmem⟩ := exists_lines_finset (p := p)
+  have hset : {H : Subgroup (CpSq p) | Nat.card H = p} = (↑L : Set (Subgroup (CpSq p))) := by
+    ext H; simp [hLmem H]
+  rw [hset, Set.ncard_coe_finset, hLcard]
+
+/-! ### The dimension-two construction (for `p ≥ 5`)
+
+The two pairs are `(a, b)` and `((a*b²)⁻¹, (a*b³)²)`; the six constituent lines
+`⟨a⟩, ⟨b⟩, ⟨a*b⟩, ⟨a*b²⟩, ⟨a*b³⟩, ⟨a*b⁴⟩` are pairwise distinct for `p ≥ 5`. -/
+
+section Dim2
+
+variable {a b : CpSq p} (hgen : Subgroup.closure ({a, b} : Set (CpSq p)) = ⊤) (hp2 : p ≠ 2)
+
+include hgen hp2
+
+theorem sigma_f2 : sigmaSet (a * b ^ 2)⁻¹ ((a * b ^ 3) ^ 2) =
+    ↑(Subgroup.zpowers (a * b ^ 2)) ∪ ↑(Subgroup.zpowers (a * b ^ 3)) ∪
+      ↑(Subgroup.zpowers (a * b ^ 4)) := by
+  have e : (a * b ^ 2)⁻¹ * (a * b ^ 3) ^ 2 = a * b ^ 4 := by
+    apply Multiplicative.toAdd.injective
+    simp only [toAdd_mul, toAdd_inv, toAdd_pow]; abel
+  rw [sigmaSet_of_comm, Subgroup.zpowers_inv,
+    zpowers_pow (mul_pow_ne_one hgen 3) (not_dvd_of_ne Nat.prime_two hp2), e]
+
+end Dim2
+
+/-- The two generating pairs of the dimension-2 Beauville structure of `C_p²` (`p ≥ 5`). -/
+def pairs2 {a b : CpSq p} (hgen : Subgroup.closure ({a, b} : Set (CpSq p)) = ⊤) (hp2 : p ≠ 2)
+    (_hp3 : p ≠ 3) : Fin 2 → GeneratingPair (CpSq p)
+  | 0 => ⟨a, b, hgen⟩
+  | 1 => ⟨(a * b ^ 2)⁻¹, (a * b ^ 3) ^ 2,
+      closure_eq_top_of_zpowers_ne (inv_ne_one.mpr (mul_pow_ne_one hgen 2))
+        (pow_ne_one_of_not_dvd (mul_pow_ne_one hgen 3) (not_dvd_of_ne Nat.prime_two hp2))
+        (by rw [Subgroup.zpowers_inv,
+              zpowers_pow (mul_pow_ne_one hgen 3) (not_dvd_of_ne Nat.prime_two hp2)]
+            exact zpowers_mul_pow_ne_mul_pow hgen
+              (pow_ne_pow_of_lt (snd_ne_one hgen) (by norm_num)
+                (by have := (Fact.out : p.Prime).two_le; omega)))⟩
+
+/-- The two Σ-sets of the dimension-2 family meet only in the identity. -/
+theorem inter2_eq_one {a b : CpSq p} (hgen : Subgroup.closure ({a, b} : Set (CpSq p)) = ⊤)
+    (hp2 : p ≠ 2) (hp3 : p ≠ 3) :
+    (⋂ i, sigmaSet (pairs2 hgen hp2 hp3 i).x (pairs2 hgen hp2 hp3 i).y) = {1} := by
+  apply Set.eq_singleton_iff_unique_mem.mpr
+  refine ⟨Set.mem_iInter.mpr (fun i => one_mem_sigmaSet _ _), ?_⟩
+  intro g hg
+  rw [Set.mem_iInter] at hg
+  by_contra hg1
+  have h0 : g ∈ sigmaSet a b := hg 0
+  have h1 : g ∈ sigmaSet (a * b ^ 2)⁻¹ ((a * b ^ 3) ^ 2) := hg 1
+  rw [sigmaSet_of_comm] at h0
+  rw [sigma_f2 hgen hp2] at h1
+  have hp : p.Prime := Fact.out
+  have hp2le := hp.two_le
+  have ca := card_zpowers_eq_p (fst_ne_one hgen)
+  have cb := card_zpowers_eq_p (snd_ne_one hgen)
+  have cab := card_zpowers_eq_p (mul_ne_one hgen)
+  have cab2 := card_zpowers_eq_p (mul_pow_ne_one hgen 2)
+  have cab3 := card_zpowers_eq_p (mul_pow_ne_one hgen 3)
+  have cab4 := card_zpowers_eq_p (mul_pow_ne_one hgen 4)
+  have hb12 : b ^ 1 ≠ b ^ 2 := pow_ne_pow_of_lt (snd_ne_one hgen) (by norm_num) (by omega)
+  have hb13 : b ^ 1 ≠ b ^ 3 := pow_ne_pow_of_lt (snd_ne_one hgen) (by norm_num) (by omega)
+  have hb14 : b ^ 1 ≠ b ^ 4 := pow_ne_pow_of_lt (snd_ne_one hgen) (by norm_num) (by omega)
+  have d_a_ab2 : Subgroup.zpowers a ≠ Subgroup.zpowers (a * b ^ 2) :=
+    zpowers_fst_ne_mul_pow hgen (not_dvd_of_ne Nat.prime_two hp2)
+  have d_a_ab3 : Subgroup.zpowers a ≠ Subgroup.zpowers (a * b ^ 3) :=
+    zpowers_fst_ne_mul_pow hgen (not_dvd_of_ne Nat.prime_three hp3)
+  have d_a_ab4 : Subgroup.zpowers a ≠ Subgroup.zpowers (a * b ^ 4) :=
+    zpowers_fst_ne_mul_pow hgen (not_dvd_four hp2)
+  have d_b_ab2 : Subgroup.zpowers b ≠ Subgroup.zpowers (a * b ^ 2) := zpowers_snd_ne_mul_pow hgen 2
+  have d_b_ab3 : Subgroup.zpowers b ≠ Subgroup.zpowers (a * b ^ 3) := zpowers_snd_ne_mul_pow hgen 3
+  have d_b_ab4 : Subgroup.zpowers b ≠ Subgroup.zpowers (a * b ^ 4) := zpowers_snd_ne_mul_pow hgen 4
+  have d_ab_ab2 : Subgroup.zpowers (a * b) ≠ Subgroup.zpowers (a * b ^ 2) := by
+    have h := zpowers_mul_pow_ne_mul_pow hgen hb12; rwa [pow_one] at h
+  have d_ab_ab3 : Subgroup.zpowers (a * b) ≠ Subgroup.zpowers (a * b ^ 3) := by
+    have h := zpowers_mul_pow_ne_mul_pow hgen hb13; rwa [pow_one] at h
+  have d_ab_ab4 : Subgroup.zpowers (a * b) ≠ Subgroup.zpowers (a * b ^ 4) := by
+    have h := zpowers_mul_pow_ne_mul_pow hgen hb14; rwa [pow_one] at h
+  simp only [Set.mem_union, SetLike.mem_coe] at h0 h1
+  rcases h0 with (hL1 | hL2) | hL3
+  · rcases h1 with (hM2 | hM3) | hM4
+    · exact d_a_ab2 (eq_of_mem_of_mem hg1 ca cab2 hL1 hM2)
+    · exact d_a_ab3 (eq_of_mem_of_mem hg1 ca cab3 hL1 hM3)
+    · exact d_a_ab4 (eq_of_mem_of_mem hg1 ca cab4 hL1 hM4)
+  · rcases h1 with (hM2 | hM3) | hM4
+    · exact d_b_ab2 (eq_of_mem_of_mem hg1 cb cab2 hL2 hM2)
+    · exact d_b_ab3 (eq_of_mem_of_mem hg1 cb cab3 hL2 hM3)
+    · exact d_b_ab4 (eq_of_mem_of_mem hg1 cb cab4 hL2 hM4)
+  · rcases h1 with (hM2 | hM3) | hM4
+    · exact d_ab_ab2 (eq_of_mem_of_mem hg1 cab cab2 hL3 hM2)
+    · exact d_ab_ab3 (eq_of_mem_of_mem hg1 cab cab3 hL3 hM3)
+    · exact d_ab_ab4 (eq_of_mem_of_mem hg1 cab cab4 hL3 hM4)
+
+/-- The dimension-2 generalised Beauville structure of `C_p²` (for `p ≥ 5`). -/
+def beauville2 {a b : CpSq p} (hgen : Subgroup.closure ({a, b} : Set (CpSq p)) = ⊤) (hp2 : p ≠ 2)
+    (hp3 : p ≠ 3) : GeneralisedBeauvilleStructure (CpSq p) where
+  ι := Fin 2
+  pairs := pairs2 hgen hp2 hp3
+  inter_sigmaSet_eq_one := inter2_eq_one hgen hp2 hp3
+
+theorem primitive2 {a b : CpSq p} (hgen : Subgroup.closure ({a, b} : Set (CpSq p)) = ⊤)
+    (hp2 : p ≠ 2) (hp3 : p ≠ 3) : (beauville2 hgen hp2 hp3).IsPrimitive := by
+  intro S hS
+  have hex : ∃ j : Fin 2, j ∉ S := by
+    by_contra hcon
+    simp only [not_exists, not_not] at hcon
+    exact hS (Finset.eq_univ_iff_forall.mpr hcon)
+  obtain ⟨j, hj⟩ := hex
+  obtain ⟨w, hw1, hwi⟩ : ∃ w : CpSq p, w ≠ 1 ∧
+      ∀ i : Fin 2, i ≠ j → w ∈ sigmaSet (pairs2 hgen hp2 hp3 i).x (pairs2 hgen hp2 hp3 i).y := by
+    fin_cases j
+    · refine ⟨a * b ^ 2, mul_pow_ne_one hgen 2, fun i hi => ?_⟩
+      fin_cases i
+      · exact absurd rfl hi
+      · change a * b ^ 2 ∈ sigmaSet (a * b ^ 2)⁻¹ ((a * b ^ 3) ^ 2)
+        rw [sigma_f2 hgen hp2]; exact Or.inl (Or.inl (Subgroup.mem_zpowers _))
+    · refine ⟨a, fst_ne_one hgen, fun i hi => ?_⟩
+      fin_cases i
+      · change a ∈ sigmaSet a b
+        rw [sigmaSet_of_comm]; exact Or.inl (Or.inl (Subgroup.mem_zpowers _))
+      · exact absurd rfl hi
+  intro hcontra
+  have hwmem : w ∈ ⋂ i ∈ S, sigmaSet ((beauville2 hgen hp2 hp3).pairs i).x
+      ((beauville2 hgen hp2 hp3).pairs i).y :=
+    Set.mem_iInter₂.mpr (fun i hi => hwi i (fun e => hj (e ▸ hi)))
+  rw [hcontra, Set.mem_singleton_iff] at hwmem
+  exact hw1 hwmem
+
+/-- **`2 ∈ BSpec(C_p²)`** for primes `p ≥ 5`. -/
+theorem two_mem_BSpec (hp2 : p ≠ 2) (hp3 : p ≠ 3) : 2 ∈ BeauvilleSpectrum (CpSq p) :=
+  ⟨beauville2 basis_gen hp2 hp3, primitive2 basis_gen hp2 hp3, by
+    rw [GeneralisedBeauvilleStructure.dimension]; exact Fintype.card_fin 2⟩
+
+/-! ### `p = 3`: the minimum of `BSpec(C_3²)` is `4` -/
+
+/-- For `p = 3`, every primitive structure has dimension `≥ 4`. Each Σ-set contains exactly `3`
+of the `4` lines of `C_3²`, so misses exactly `1`; since `⋂ᵢ Σᵢ = {1}`, every line (having
+`3 > 1` elements) must be missed by some `Σᵢ` (`exists_sigmaSet_not_subset`). The `4` lines are
+thus covered by the (size-`1`) "missed-line" sets of the `Fintype.card B.ι` indices, forcing
+`4 ≤ Fintype.card B.ι`. -/
+theorem four_le_dimension_of_three (hp3 : p = 3) (B : GeneralisedBeauvilleStructure (CpSq p))
+    (hB : B.IsPrimitive) : 4 ≤ B.dimension := by
+  classical
+  subst hp3
+  obtain ⟨L, hLcard, hLmem⟩ := exists_lines_finset (p := 3)
+  set Li : B.ι → Finset (Subgroup (CpSq 3)) :=
+    fun i => L.filter (fun H => (↑H : Set (CpSq 3)) ⊆ sigmaSet (B.pairs i).x (B.pairs i).y)
+    with hLi
+  have hLi_sub : ∀ i, Li i ⊆ L := fun i => by simp only [hLi]; exact Finset.filter_subset _ _
+  have hLi_card : ∀ i, (Li i).card = 3 := by
+    intro i
+    have hset : (↑(Li i) : Set (Subgroup (CpSq 3)))
+        = {H : Subgroup (CpSq 3) | Nat.card H = 3 ∧
+            (↑H : Set (CpSq 3)) ⊆ sigmaSet (B.pairs i).x (B.pairs i).y} := by
+      ext H
+      simp only [hLi, Finset.coe_filter, Set.mem_setOf_eq, hLmem H]
+    rw [← Set.ncard_coe_finset, hset]
+    exact ncard_lines_of_sigmaSet (B.pairs i).generates
+  set Mi : B.ι → Finset (Subgroup (CpSq 3)) := fun i => L \ Li i with hMi
+  have hMi_card : ∀ i, (Mi i).card = 1 := by
+    intro i
+    simp only [hMi, Finset.card_sdiff_of_subset (hLi_sub i), hLi_card i, hLcard]
+  have hcover : L ⊆ Finset.univ.biUnion Mi := by
+    intro H hHL
+    have hHcard : Nat.card H = 3 := (hLmem H).mp hHL
+    obtain ⟨g, hgH, hg1⟩ := (Subgroup.nontrivial_iff_exists_ne_one H).mp
+      ((Subgroup.nontrivial_iff_ne_bot H).mpr (by
+        rw [← Subgroup.one_lt_card_iff_ne_bot, hHcard]; norm_num))
+    obtain ⟨i, hi⟩ := B.exists_sigmaSet_not_subset ⟨g, hgH, hg1⟩
+    refine Finset.mem_biUnion.mpr ⟨i, Finset.mem_univ i, ?_⟩
+    simp only [hMi, hLi, Finset.mem_sdiff, Finset.mem_filter]
+    exact ⟨hHL, fun hLiH => hi hLiH.2⟩
+  have h4 : L.card ≤ (Finset.univ.biUnion Mi).card := Finset.card_le_card hcover
+  have hsum_le : (Finset.univ.biUnion Mi).card ≤ ∑ i : B.ι, (Mi i).card := Finset.card_biUnion_le
+  have hsum_eq : ∑ i : B.ι, (Mi i).card = Fintype.card B.ι := by
+    simp [hMi_card, Finset.card_univ]
+  rw [GeneralisedBeauvilleStructure.dimension]
+  omega
+
 /-! ### External input: the minimum (Remark / Carta–Fairbairn, Thm 2.9) -/
 
-/-- **Remark (Carta–Fairbairn, Generalised Beauville Groups, Thm 2.9).** For odd primes `p`, the
-minimum of `BSpec(C_p²)` is `4` when `p = 3` and `2` otherwise. This is quoted from the literature
-and is the single externally-cited input; it is not proved here. -/
+/-- **Proposition (cf. Carta–Fairbairn, Generalised Beauville Groups, Thm 2.9).** For odd primes
+`p`, the minimum of `BSpec(C_p²)` is `4` when `p = 3` and `2` otherwise. -/
 theorem isLeast_BSpec (hp2 : p ≠ 2) :
-    IsLeast (BeauvilleSpectrum (CpSq p)) (if p = 3 then 4 else 2) := sorry
+    IsLeast (BeauvilleSpectrum (CpSq p)) (if p = 3 then 4 else 2) := by
+  by_cases hp3 : p = 3
+  · rw [if_pos hp3]
+    subst hp3
+    refine ⟨four_mem_BSpec hp2, ?_⟩
+    rintro d ⟨B, hBprim, rfl⟩
+    exact four_le_dimension_of_three rfl B hBprim
+  · rw [if_neg hp3]
+    refine ⟨two_mem_BSpec hp2 hp3, ?_⟩
+    rintro d ⟨B, hBprim, rfl⟩
+    exact two_le_dimension B
 
 /-! ### The dimension-three construction (for `p ≥ 5`)
 
@@ -574,12 +903,6 @@ variable {a b : CpSq p} (hgen : Subgroup.closure ({a, b} : Set (CpSq p)) = ⊤)
 
 include hgen
 
-theorem mul_cube_ne_one : a * b ^ 3 ≠ 1 := by
-  intro h
-  refine not_mem_of_zpowers_ne (fst_ne_one hgen) (card_zpowers_eq_p (snd_ne_one hgen))
-    (zpowers_fst_ne_snd hgen) ?_
-  rw [eq_inv_of_mul_eq_one_left h]
-  exact inv_mem (pow_mem (Subgroup.mem_zpowers b) 3)
 
 include hp2
 
@@ -590,7 +913,7 @@ theorem sigma_e2 : sigmaSet (a * b)⁻¹ ((a * b ^ 2) ^ 2) =
     apply Multiplicative.toAdd.injective
     simp only [toAdd_mul, toAdd_inv, toAdd_pow]; abel
   rw [sigmaSet_of_comm, Subgroup.zpowers_inv,
-    zpowers_pow (mul_sq_ne_one hgen) (not_dvd_of_ne Nat.prime_two hp2), e]
+    zpowers_pow (mul_pow_ne_one hgen 2) (not_dvd_of_ne Nat.prime_two hp2), e]
 
 end Dim3
 
@@ -614,9 +937,9 @@ def pairs3 {a b : CpSq p} (hgen : Subgroup.closure ({a, b} : Set (CpSq p)) = ⊤
           exact zpowers_fst_ne_snd hgen)⟩
   | 2 => ⟨(a * b)⁻¹, (a * b ^ 2) ^ 2,
       closure_eq_top_of_zpowers_ne (inv_ne_one.mpr (mul_ne_one hgen))
-        (pow_ne_one_of_not_dvd (mul_sq_ne_one hgen) (not_dvd_of_ne Nat.prime_two hp2))
+        (pow_ne_one_of_not_dvd (mul_pow_ne_one hgen 2) (not_dvd_of_ne Nat.prime_two hp2))
         (by rw [Subgroup.zpowers_inv,
-              zpowers_pow (mul_sq_ne_one hgen) (not_dvd_of_ne Nat.prime_two hp2)]
+              zpowers_pow (mul_pow_ne_one hgen 2) (not_dvd_of_ne Nat.prime_two hp2)]
             exact zpowers_mul_ne_mul_sq hgen)⟩
 
 theorem inter3_eq_one {a b : CpSq p} (hgen : Subgroup.closure ({a, b} : Set (CpSq p)) = ⊤)
@@ -636,8 +959,8 @@ theorem inter3_eq_one {a b : CpSq p} (hgen : Subgroup.closure ({a, b} : Set (CpS
   have ca := card_zpowers_eq_p (fst_ne_one hgen)
   have cb := card_zpowers_eq_p (snd_ne_one hgen)
   have cab := card_zpowers_eq_p (mul_ne_one hgen)
-  have cab2 := card_zpowers_eq_p (mul_sq_ne_one hgen)
-  have cab3 := card_zpowers_eq_p (mul_cube_ne_one hgen)
+  have cab2 := card_zpowers_eq_p (mul_pow_ne_one hgen 2)
+  have cab3 := card_zpowers_eq_p (mul_pow_ne_one hgen 3)
   have d13 := zpowers_fst_ne_mul hgen
   have d23 := zpowers_snd_ne_mul hgen
   have d14 := zpowers_fst_ne_mul_pow hgen (not_dvd_of_ne Nat.prime_two hp2)
@@ -678,7 +1001,7 @@ theorem primitive3 {a b : CpSq p} (hgen : Subgroup.closure ({a, b} : Set (CpSq p
   obtain ⟨w, hw1, hwi⟩ : ∃ w : CpSq p, w ≠ 1 ∧
       ∀ i : Fin 3, i ≠ j → w ∈ sigmaSet (pairs3 hgen hp2 hp3 i).x (pairs3 hgen hp2 hp3 i).y := by
     fin_cases j
-    · refine ⟨a * b ^ 2, mul_sq_ne_one hgen, fun i hi => ?_⟩
+    · refine ⟨a * b ^ 2, mul_pow_ne_one hgen 2, fun i hi => ?_⟩
       fin_cases i
       · exact absurd rfl hi
       · change a * b ^ 2 ∈ sigmaSet a (b ^ 2)
