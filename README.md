@@ -23,17 +23,16 @@ The central definitions are:
 
 | File | Contents |
 | --- | --- |
-| `GenBeauGrp.lean` | Root library file; defines the public import graph (currently `Basic`, `SigmaSet`). |
+| `GenBeauGrp.lean` | Root library file; defines the public import graph (`Basic`, `SigmaSet`, `Abelian`, `Structures`, `Bounds`, `CpSquared`, `Examples`). |
 | `GenBeauGrp/Basic.lean` | `GeneratingPair G` and its additive analogue `AddGeneratingPair G`. |
 | `GenBeauGrp/SigmaSet.lean` | `sigmaSet x y` — the union of conjugates of `⟨x⟩`, `⟨y⟩`, `⟨x·y⟩`. |
 | `GenBeauGrp/Structures.lean` | `GeneralisedBeauvilleStructure G` (a finite family of pairs with disjoint Σ-sets), its `dimension` and `IsPrimitive` predicate, the group invariant `BeauvilleSpectrum G`, and the corollary that some Σ-set avoids any given non-trivial subset. |
 | `GenBeauGrp/Abelian.lean` | The abelian collapse `sigmaSet x y = ↑⟨x⟩ ∪ ↑⟨y⟩ ∪ ↑⟨x·y⟩` for commutative groups, plus supporting Σ-set lemmas. |
 | `GenBeauGrp/CpSquared.lean` | The Beauville spectrum of `C_p² = Multiplicative (ZMod p × ZMod p)` for odd primes `p`: every Σ-set holds exactly three lines, `max BSpec(C_p²) = 4`, and `BSpec(C_p²) = {4}` if `p = 3` else `{2,3,4}` (the minimum is quoted from Carta–Fairbairn and is the only `sorry`). |
-| `GenBeauGrp/Examples.lean` | Worked examples: generating pairs for `ℤ`, `ℤ × ℤ`, products of cyclic groups, and the symmetric group `Equiv.Perm (Fin n)` (the `n`-cycle plus an adjacent transposition). |
+| `GenBeauGrp/Bounds.lean` | Abstract upper-bound machinery (Section 3 of the draft): minimal subgroups of prime order, the count `k(Σ)` of conjugacy classes of minimal subgroups in a Σ-set, and how it bounds the dimension of a primitive generalised Beauville structure. |
+| `GenBeauGrp/Examples.lean` | Worked examples: generating pairs for `ℤ`, products of cyclic groups, and the symmetric group `Equiv.Perm (Fin n)` (the `n`-cycle plus an adjacent transposition). |
 
-`Structures.lean`, `Abelian.lean`, `CpSquared.lean`, and `Examples.lean` type-check but are not yet
-imported into `GenBeauGrp.lean`, so they sit outside the public import graph (a bare `lake build`
-still checks them).
+All modules are imported into `GenBeauGrp.lean` and form part of the public import graph.
 
 ## Building
 

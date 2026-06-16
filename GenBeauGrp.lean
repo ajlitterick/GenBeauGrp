@@ -4,3 +4,4 @@ import GenBeauGrp.Abelian
 import GenBeauGrp.Structures
 import GenBeauGrp.Bounds
 import GenBeauGrp.CpSquared
+import GenBeauGrp.Examples

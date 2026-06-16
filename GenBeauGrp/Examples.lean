@@ -1,6 +1,7 @@
 import GenBeauGrp.Basic
 import Mathlib.GroupTheory.Perm.Closure
 
+-- Not a particularly useful generating pair
 example : AddGeneratingPair ℤ :=
   ⟨1,-1, by
     apply top_unique
@@ -10,20 +11,12 @@ example : AddGeneratingPair ℤ :=
     left; rfl
   ⟩
 
-example : AddGeneratingPair (ℤ × ℤ) :=
-  ⟨(1,0), (0,1) , by
-    apply top_unique
-    intro ⟨a,b⟩ _
-    apply AddSubgroup.mem_closure_pair.mpr
-    use a, b
-    norm_num
-  ⟩
-
+/-- If `g₁` generates `G₁` and `g₂` generates `G₂`,
+then `(g₁,1)` and `(1,g₂)` generate the product. -/
 noncomputable example
   (G₁ G₂ : Type*)
     [CommGroup G₁] [IsCyclic G₁]
     [CommGroup G₂] [IsCyclic G₂] : GeneratingPair (G₁ × G₂) := by
-    -- If g₁ generates G₁ and g₂ generates G₂, then (g₁,1) and (1,g₂) generate the product.
     let g₁ := (IsCyclic.exists_zpow_surjective (G := G₁)).choose
     let g₂ := (IsCyclic.exists_zpow_surjective (G := G₂)).choose
     have hg₁ : Function.Surjective (fun k : ℤ => g₁ ^ k) :=
@@ -46,7 +39,7 @@ def c (n : ℕ) (hn : 2 < n) : Equiv.Perm (Fin n) := Fin.cycleRange ⟨ n-1, by 
 /-- For `n > 2`, the adjacent transposition `s = (0 1)` together with the `n`-cycle
 `c = (0 1 … n-1)` form a generating pair of the symmetric group `Equiv.Perm (Fin n)`:
 this is the classical fact that an `n`-cycle and an adjacent transposition generate `Sₙ`. -/
-def permGeneratingPair {n : ℕ} (hn : 2 < n) : GeneratingPair (Equiv.Perm (Fin n)) where
+example {n : ℕ} (hn : 2 < n) : GeneratingPair (Equiv.Perm (Fin n)) where
   x := s hn
   y := c n hn
   generates := by
