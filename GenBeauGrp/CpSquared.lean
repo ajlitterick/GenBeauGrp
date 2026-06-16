@@ -429,9 +429,6 @@ include hgen
 
 
 
-include hp2
-
-omit hp2 in
 theorem zpowers_mul_ne_mul_sq : Subgroup.zpowers (a * b) ≠ Subgroup.zpowers (a * b ^ 2) := by
   refine zpowers_ne_of_not_mem ?_
   have e : a * b ^ 2 = (a * b) * b := by
@@ -441,6 +438,8 @@ theorem zpowers_mul_ne_mul_sq : Subgroup.zpowers (a * b) ≠ Subgroup.zpowers (a
   exact mul_not_mem_left (Subgroup.mem_zpowers (a * b))
     (not_mem_of_zpowers_ne (snd_ne_one hgen) (card_zpowers_eq_p (mul_ne_one hgen))
       (zpowers_snd_ne_mul hgen))
+
+include hp2
 
 theorem sigma_d1 : sigmaSet a (b ^ 2) =
     ↑(Subgroup.zpowers a) ∪ ↑(Subgroup.zpowers b) ∪ ↑(Subgroup.zpowers (a * b ^ 2)) := by
@@ -917,15 +916,13 @@ theorem sigma_e2 : sigmaSet (a * b)⁻¹ ((a * b ^ 2) ^ 2) =
 
 end Dim3
 
-omit [Fact p.Prime] in
 /-- **Consistency Remark.** When `p = 3`, the line `⟨a*b³⟩` coincides with `⟨a⟩` (since
 `b³ = b^p = 1`). This is exactly why the dimension-3 construction requires `p ≠ 3`: at `p = 3`
 the Σ-set `Σ((a*b)⁻¹, (a*b²)²)` no longer meets `Σ(a, b)` only in the identity, consistent with
 `min(BSpec(C₃²)) = 4`. -/
-theorem zpowers_mul_cube_eq_of_three (hp3 : p = 3) {a b : CpSq p} :
+theorem zpowers_mul_cube_eq_of_three {a b : CpSq 3} :
     Subgroup.zpowers (a * b ^ 3) = Subgroup.zpowers a := by
-  have hb : b ^ 3 = 1 := by rw [← hp3]; exact pow_eq_one b
-  rw [hb, mul_one]
+  rw [pow_eq_one b, mul_one]
 
 /-- The three generating pairs of the dimension-3 Beauville structure of `C_p²` (`p ≥ 5`). -/
 def pairs3 {a b : CpSq p} (hgen : Subgroup.closure ({a, b} : Set (CpSq p)) = ⊤) (hp2 : p ≠ 2)

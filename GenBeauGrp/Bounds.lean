@@ -39,10 +39,6 @@ of each class (Remark 3.2). -/
 def minimalClassesIn (S : Set G) : Set (Set G) :=
   { C | ∃ H : Subgroup G, IsMinimalSubgroup H ∧ C = Group.conjugatesOfSet (↑H : Set G) ∧ C ⊆ S }
 
-/-- `minimalClassesIn S` is always finite, since `G` is finite. -/
-theorem minimalClassesIn_finite (S : Set G) : (minimalClassesIn S).Finite :=
-  Set.toFinite _
-
 /-- `k(Σ)`: the number of conjugacy classes of minimal subgroups contained in `S`. -/
 noncomputable def kSigma (S : Set G) : ℕ := (minimalClassesIn S).ncard
 
@@ -126,7 +122,7 @@ theorem dimension_le_one_add_kSigma (B : GeneralisedBeauvilleStructure G) (hB : 
     hinj.mono (Set.subset_univ _)
   have hle : (↑(Finset.univ.erase i₀) : Set B.ι).ncard
       ≤ kSigma (sigmaSet (B.pairs i₀).x (B.pairs i₀).y) :=
-    Set.ncard_le_ncard_of_injOn f hmaps hinjon (minimalClassesIn_finite _)
+    Set.ncard_le_ncard_of_injOn f hmaps hinjon (Set.toFinite _)
   rw [Set.ncard_coe_finset] at hle
   rw [GeneralisedBeauvilleStructure.dimension, ← Finset.card_univ,
     ← Finset.card_erase_add_one (Finset.mem_univ i₀)]
@@ -166,11 +162,6 @@ theorem isMinimalSubgroup_minimalSubgroup {g : G} (hg : orderOf g ≠ 1) :
   unfold IsMinimalSubgroup minimalSubgroup
   rw [Nat.card_zpowers, orderOf_pow_orderOf_div hgpos (Nat.minFac_dvd _)]
   exact Nat.minFac_prime hg
-
-omit [Finite G] in
-/-- `minimalSubgroup g ≤ ⟨g⟩`. -/
-theorem minimalSubgroup_le_zpowers (g : G) : minimalSubgroup g ≤ Subgroup.zpowers g :=
-  Subgroup.zpowers_le_of_mem (Subgroup.npow_mem_zpowers g _)
 
 omit [Finite G] in
 /-- If `H` is a minimal subgroup and `h ∈ H` is non-identity, then `H = ⟨h⟩`. -/
